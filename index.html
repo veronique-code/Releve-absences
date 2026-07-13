@@ -194,13 +194,22 @@ body{
 }
 
 @media (max-width: 640px){
+  html{ font-size:20px; }
   .masthead{ padding:1.7rem 1.1rem 1.6rem; }
   .masthead::before{ left:20px; }
-  .masthead h1{ margin-left:34px; font-size:1.5rem; }
+  .masthead h1{ margin-left:34px; font-size:1.6rem; }
   .masthead .eyebrow, .masthead p{ margin-left:34px; }
+  .masthead p{ font-size:1rem; }
   .desk{ padding:1.8rem 1.1rem 0; }
-  .shelf{ grid-template-columns:1fr; gap:1.3rem; }
-  .footnote{ margin:2rem 1.1rem 0; }
+  .desk-label{ font-size:.85rem; }
+  .shelf{ grid-template-columns:1fr; gap:1.3rem; max-width:none; }
+  .record{ padding:2rem 1.3rem 1.5rem; }
+  .record h2{ font-size:1.5rem; }
+  .record p.desc{ font-size:1rem; min-height:0; }
+  .record .go{ font-size:.92rem; }
+  .tab{ font-size:.8rem; padding:.35rem .8rem .4rem; }
+  .tag{ font-size:.76rem; padding:.3rem .7rem; }
+  .footnote{ margin:2rem 1.1rem 0; font-size:.85rem; }
 }
 </style>
 </head>
