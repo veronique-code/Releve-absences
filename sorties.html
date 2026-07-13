@@ -116,6 +116,46 @@ header.top .subtitle{font-size:13px;color:var(--ink-soft);margin-top:2px;}
   border-radius:8px;padding:9px 14px;margin-bottom:20px;line-height:1.5;
 }
 
+.access-gate{
+  position:fixed;
+  inset:0;
+  background:rgba(35,59,51,.55);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  z-index:100;
+}
+.access-box{
+  background:var(--card);
+  border-radius:14px;
+  max-width:420px;
+  width:100%;
+  padding:26px 24px;
+  box-shadow:0 10px 40px rgba(0,0,0,.25);
+  border:1px solid var(--line);
+}
+.access-box h2{
+  font-size:19px;
+  margin:0 0 8px;
+  color:var(--forest-dark);
+}
+.access-box p{
+  font-size:13.5px;
+  color:var(--ink-soft);
+  line-height:1.5;
+  margin:0 0 14px;
+}
+.access-box input{
+  width:100%;
+  margin-bottom:14px;
+}
+.access-hint{
+  font-size:11.5px !important;
+  margin:12px 0 0 !important;
+  font-style:italic;
+}
+
 .card-badge{
   position:absolute;top:14px;right:14px;z-index:1;
   background:var(--pending);color:#fff;font-size:11px;font-weight:700;
@@ -313,7 +353,17 @@ select:focus, input:focus, textarea:focus{outline:2px solid var(--forest);outlin
   </div>
 
   <div class="storage-note" id="storageNote">
-    💾 Vos données sont enregistrées dans <strong>ce navigateur, sur cet ordinateur</strong>. Si vous changez d'appareil ou de navigateur, utilisez « Exporter » puis « Importer » pour transférer votre carnet.
+    Connexion à la synchronisation…
+  </div>
+
+  <div class="access-gate" id="accessGate" style="display:none;">
+    <div class="access-box">
+      <h2>Espace direction</h2>
+      <p>Entrez votre code d'accès partagé pour synchroniser le carnet des sorties entre vos postes. C'est le même code que pour le cahier d'appel.</p>
+      <input type="text" id="accessCodeInput" placeholder="Ex. jeanaicard-2026">
+      <button class="btn btn-primary" id="accessCodeSubmit" style="width:100%;">Continuer</button>
+      <p class="access-hint">Notez ce code : sans lui, impossible de retrouver vos données sur un autre appareil.</p>
+    </div>
   </div>
 
   <div class="grid" id="grid"></div>
@@ -408,7 +458,27 @@ select:focus, input:focus, textarea:focus{outline:2px solid var(--forest);outlin
   </div>
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, onSnapshot, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+// ⬇⬇⬇ COLLEZ ICI VOTRE CONFIGURATION FIREBASE (la même que dans cahier-appel.html) ⬇⬇⬇
+const firebaseConfig = {
+  apiKey: "AIzaSyDovrxndeWXBs-ZA_-QQYw6983D5bQ6kgo",
+  authDomain: "sorties-scolaires.firebaseapp.com",
+  projectId: "sorties-scolaires",
+  storageBucket: "sorties-scolaires.firebasestorage.app",
+  messagingSenderId: "690408502155",
+  appId: "1:690408502155:web:d0d5cfc618e64d5028f58e"
+};
+// ⬆⬆⬆ ⬆⬆⬆ ⬆⬆⬆
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+try{ await enableIndexedDbPersistence(db); }catch(e){ /* plusieurs onglets ouverts : normal, on continue */ }
+
 const CLASSES = [
   "CPA LATRACH","CPB SEYFRIED","CPC OSTROWSKI",
   "CE1A MONJARDIN","CE1B BASOLO","CE1/CE2 COMBA",
@@ -436,23 +506,81 @@ let sorties = [];
 let editingId = null;
 let modalState = { classes:[], needsCantine:false, steps:{} };
 
-const STORAGE_KEY = 'carnet_sorties_jean_aicard_2026_2027';
+let docRef = null;
 
-async function loadData(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    sorties = raw ? JSON.parse(raw) : [];
-  }catch(e){ sorties = []; }
-  render();
+function accessCodeKey(){ return 'espace-direction-access-code'; }
+
+async function sha256Hex(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-async function saveData(){
+
+function setSyncStatus(html){
+  const el = document.getElementById('storageNote');
+  el.innerHTML = html + ' <button class="alert-toggle" id="btnChangeCode" style="margin-left:8px;">Changer de code</button>';
+  document.getElementById('btnChangeCode').addEventListener('click', onChangeCode);
+}
+
+async function initSync(code){
+  localStorage.setItem(accessCodeKey(), code);
+  setSyncStatus('Connexion en cours…');
   try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sorties));
+    await signInAnonymously(auth);
+    const hash = (await sha256Hex(code)).slice(0,32);
+    docRef = doc(db, 'sorties', hash);
+    onSnapshot(docRef, (snap)=>{
+      sorties = (snap.exists() && snap.data().payload) ? JSON.parse(snap.data().payload) : [];
+      setSyncStatus('🟢 Synchronisé en temps réel avec vos autres postes.');
+      render();
+    }, (err)=>{
+      console.error('Erreur de synchronisation', err);
+      setSyncStatus('🔴 Hors ligne — vos modifications seront envoyées au retour de la connexion.');
+    });
   }catch(e){
-    console.error('Erreur de sauvegarde', e);
-    alert("La sauvegarde locale a échoué. Pensez à exporter régulièrement vos données (bouton « Exporter »).");
+    console.error(e);
+    setSyncStatus('🔴 Impossible de se connecter à la synchronisation.');
   }
 }
+
+async function saveData(){
+  if(!docRef) return;
+  try{
+    await setDoc(docRef, { payload: JSON.stringify(sorties), updatedAt: Date.now() });
+  }catch(e){
+    console.error('Erreur de sauvegarde', e);
+    setSyncStatus('🔴 Hors ligne — vos modifications seront envoyées au retour de la connexion.');
+  }
+}
+
+function onChangeCode(){
+  if(!confirm("Changer de code d'accès ? Vous devrez ressaisir le nouveau code (ou l'ancien) sur tous vos appareils.")) return;
+  localStorage.removeItem(accessCodeKey());
+  document.getElementById('accessCodeInput').value = '';
+  sorties = [];
+  docRef = null;
+  document.getElementById('accessGate').style.display = 'flex';
+}
+
+document.getElementById('accessCodeSubmit').addEventListener('click', async ()=>{
+  const val = document.getElementById('accessCodeInput').value.trim();
+  if(!val) return;
+  document.getElementById('accessGate').style.display = 'none';
+  await initSync(val);
+});
+document.getElementById('accessCodeInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter') document.getElementById('accessCodeSubmit').click();
+});
+
+(function boot(){
+  const existingCode = localStorage.getItem(accessCodeKey());
+  if(existingCode){
+    initSync(existingCode);
+  }else{
+    setSyncStatus('Non synchronisé.');
+    document.getElementById('accessGate').style.display = 'flex';
+  }
+  render();
+})();
 
 function exportData(){
   const blob = new Blob([JSON.stringify(sorties, null, 2)], {type:'application/json'});
@@ -856,7 +984,6 @@ document.getElementById('fileImport').addEventListener('change', (e)=>{
 });
 
 populateFilterClasse();
-loadData();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{

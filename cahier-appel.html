@@ -474,6 +474,68 @@ table.report td.num{ text-align:right; font-variant-numeric:tabular-nums; }
   margin-bottom:1.2rem;
 }
 
+.sync-bar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:.8rem;
+  flex-wrap:wrap;
+  padding:.7rem 1.5rem;
+  background:var(--paper);
+  border-bottom:1px solid var(--border);
+}
+.sync-bar .sync-note{
+  font-size:.78rem;
+  color:var(--ink-soft);
+}
+.sync-bar .sync-actions{
+  display:flex;
+  gap:.5rem;
+}
+
+.access-gate{
+  position:fixed;
+  inset:0;
+  background:rgba(37,52,75,.55);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:1.2rem;
+  z-index:100;
+}
+.access-box{
+  background:var(--surface);
+  border-radius:12px;
+  max-width:400px;
+  width:100%;
+  padding:1.8rem 1.6rem;
+  box-shadow:0 10px 40px rgba(0,0,0,.25);
+}
+.access-box h2{
+  font-family:'Fraunces',serif;
+  font-size:1.2rem;
+  margin:0 0 .6rem;
+  color:var(--ink);
+}
+.access-box p{
+  font-size:.85rem;
+  color:var(--ink-soft);
+  line-height:1.5;
+  margin:0 0 1rem;
+}
+.access-box input{
+  width:100%;
+  margin-bottom:1rem;
+}
+.access-box button{
+  width:100%;
+}
+.access-hint{
+  font-size:.75rem !important;
+  margin:.9rem 0 0 !important;
+  font-style:italic;
+}
+
 .table-wrap{
   overflow-x:auto;
   -webkit-overflow-scrolling:touch;
@@ -486,6 +548,7 @@ table.report td.num{ text-align:right; font-variant-numeric:tabular-nums; }
   .masthead::before{ left:20px; }
   .masthead h1{ margin-left:34px; font-size:1.35rem; }
   .masthead p{ margin-left:34px; font-size:.78rem; }
+  .sync-bar{ padding:.6rem 1rem; }
   .tabs{ padding:0 .6rem; }
   .tab{ padding:.8rem .8rem .6rem; font-size:.88rem; flex:1; text-align:center; }
   .panel{ padding:1.3rem 1rem 1.8rem 1.7rem; background-size:100% 25px; }
@@ -518,6 +581,16 @@ table.report td.num{ text-align:right; font-variant-numeric:tabular-nums; }
     <p>Suivi quotidien des absences &mdash; zone B</p>
   </div>
 
+  <div class="sync-bar">
+    <span class="sync-note" id="sync-status">Connexion à la synchronisation…</span>
+    <div class="sync-actions">
+      <button class="ghost" id="change-code-btn">Changer de code</button>
+      <button class="ghost" id="export-btn">⬇ Exporter</button>
+      <button class="ghost" id="import-btn">⬆ Importer</button>
+      <input type="file" id="import-file-input" accept="application/json" style="display:none">
+    </div>
+  </div>
+
   <div class="tabs">
     <button class="tab active" data-tab="appel">Aujourd'hui</button>
     <button class="tab" data-tab="classes">Classes</button>
@@ -530,10 +603,40 @@ table.report td.num{ text-align:right; font-variant-numeric:tabular-nums; }
 
 </div>
 
+<div class="access-gate" id="access-gate" style="display:none;">
+  <div class="access-box">
+    <h2>Espace direction</h2>
+    <p>Entrez votre code d'accès partagé pour synchroniser le cahier d'appel entre vos postes. Le premier appareil crée le code, les suivants utilisent le même.</p>
+    <input type="text" id="access-code-input" placeholder="Ex. jeanaicard-2026">
+    <button id="access-code-submit">Continuer</button>
+    <p class="access-hint">Notez ce code quelque part : sans lui, impossible de retrouver vos données sur un autre appareil.</p>
+  </div>
+</div>
+
 <div id="print-area"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, onSnapshot, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+// ⬇⬇⬇ COLLEZ ICI VOTRE CONFIGURATION FIREBASE (Paramètres du projet → Général → Vos applications) ⬇⬇⬇
+const firebaseConfig = {
+  apiKey: "AIzaSyDovrxndeWXBs-ZA_-QQYw6983D5bQ6kgo",
+  authDomain: "sorties-scolaires.firebaseapp.com",
+  projectId: "sorties-scolaires",
+  storageBucket: "sorties-scolaires.firebasestorage.app",
+  messagingSenderId: "690408502155",
+  appId: "1:690408502155:web:d0d5cfc618e64d5028f58e"
+};
+// ⬆⬆⬆ ⬆⬆⬆ ⬆⬆⬆
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+try{ await enableIndexedDbPersistence(db); }catch(e){ /* plusieurs onglets ouverts : normal, on continue */ }
+
 if(window.pdfjsLib){
   pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 }
@@ -552,29 +655,145 @@ function uid(){
   return Math.random().toString(36).slice(2,9);
 }
 
-async function loadData(){
+let docRef = null;
+let firstSnapshotReceived = false;
+
+function accessCodeKey(){ return 'espace-direction-access-code'; }
+
+async function sha256Hex(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function setSyncStatus(text, ok){
+  const el = document.getElementById('sync-status');
+  if(el){ el.textContent = text; el.style.color = ok ? 'var(--present-green)' : 'var(--absent)'; }
+}
+
+async function initSync(code){
+  localStorage.setItem(accessCodeKey(), code);
+  setSyncStatus('Connexion en cours…', true);
   try{
-    const raw = localStorage.getItem('cahier-appel-data');
-    if(raw){
-      DATA = JSON.parse(raw);
-    }
+    await signInAnonymously(auth);
+    const hash = (await sha256Hex(code)).slice(0,32);
+    docRef = doc(db, 'cahier-appel', hash);
+    onSnapshot(docRef, (snap)=>{
+      if(snap.exists() && snap.data().payload){
+        DATA = JSON.parse(snap.data().payload);
+      }
+      if(!DATA.classes) DATA = { classes: [], absences: {} };
+      if(DATA.classes.length && !ui.selectedClass){
+        ui.selectedClass = DATA.classes[0].id;
+      }
+      firstSnapshotReceived = true;
+      setSyncStatus('🟢 Synchronisé en temps réel avec vos autres postes.', true);
+      render();
+    }, (err)=>{
+      console.error('Erreur de synchronisation', err);
+      setSyncStatus('🔴 Hors ligne — vos modifications seront envoyées au retour de la connexion.', false);
+    });
   }catch(e){
-    DATA = { classes: [], absences: {} };
+    console.error(e);
+    setSyncStatus('🔴 Impossible de se connecter à la synchronisation.', false);
   }
-  if(DATA.classes.length && !ui.selectedClass){
-    ui.selectedClass = DATA.classes[0].id;
-  }
-  render();
 }
 
 async function saveData(){
+  if(!docRef) return;
   try{
-    localStorage.setItem('cahier-appel-data', JSON.stringify(DATA));
+    await setDoc(docRef, { payload: JSON.stringify(DATA), updatedAt: Date.now() });
   }catch(e){
     console.error('Erreur d\'enregistrement', e);
-    alert("L'enregistrement a échoué. Si le stockage de votre navigateur est plein ou bloqué (mode navigation privée), les données risquent de ne pas être conservées.");
+    setSyncStatus('🔴 Hors ligne — vos modifications seront envoyées au retour de la connexion.', false);
   }
 }
+
+function showAccessGate(){
+  document.getElementById('access-gate').style.display = 'flex';
+}
+function hideAccessGate(){
+  document.getElementById('access-gate').style.display = 'none';
+}
+
+document.getElementById('access-code-submit').addEventListener('click', async ()=>{
+  const val = document.getElementById('access-code-input').value.trim();
+  if(!val) return;
+  hideAccessGate();
+  await initSync(val);
+});
+document.getElementById('access-code-input').addEventListener('keydown', e=>{
+  if(e.key==='Enter') document.getElementById('access-code-submit').click();
+});
+document.getElementById('change-code-btn').addEventListener('click', ()=>{
+  if(!confirm("Changer de code d'accès ? Vous devrez ressaisir le nouveau code (ou l'ancien) sur tous vos appareils.")) return;
+  localStorage.removeItem(accessCodeKey());
+  document.getElementById('access-code-input').value = '';
+  DATA = { classes: [], absences: {} };
+  docRef = null;
+  showAccessGate();
+});
+
+(function boot(){
+  const existingCode = localStorage.getItem(accessCodeKey());
+  if(existingCode){
+    initSync(existingCode);
+  }else{
+    showAccessGate();
+  }
+  render();
+})();
+
+function exportCahierData(){
+  const blob = new Blob([JSON.stringify(DATA, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'cahier-appel_' + todayISO() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importCahierData(file){
+  const reader = new FileReader();
+  reader.onload = async (e)=>{
+    try{
+      const incoming = JSON.parse(e.target.result);
+      if(!incoming || !Array.isArray(incoming.classes) || typeof incoming.absences !== 'object'){
+        throw new Error('format invalide');
+      }
+      const hasExisting = DATA.classes.length > 0 || Object.keys(DATA.absences).length > 0;
+      const merge = hasExisting
+        ? confirm(`Vous avez déjà des données sur cet appareil.\n\nOK = fusionner avec le fichier importé\nAnnuler = remplacer entièrement par le fichier importé`)
+        : true;
+      if(merge && hasExisting){
+        const existingIds = new Set(DATA.classes.map(c=>c.id));
+        incoming.classes.forEach(c=>{ if(!existingIds.has(c.id)) DATA.classes.push(c); });
+        Object.keys(incoming.absences).forEach(date=>{
+          if(!DATA.absences[date]) DATA.absences[date] = {};
+          Object.assign(DATA.absences[date], incoming.absences[date]);
+        });
+      }else{
+        DATA = incoming;
+      }
+      ui.selectedClass = DATA.classes[0] ? DATA.classes[0].id : null;
+      await saveData();
+      render();
+      alert('Import terminé : ' + DATA.classes.length + ' classe(s) au total.');
+    }catch(err){
+      alert("Ce fichier ne peut pas être importé (format JSON invalide).");
+    }
+  };
+  reader.readAsText(file);
+}
+
+document.getElementById('export-btn').addEventListener('click', exportCahierData);
+document.getElementById('import-btn').addEventListener('click', ()=>{
+  document.getElementById('import-file-input').click();
+});
+document.getElementById('import-file-input').addEventListener('change', (e)=>{
+  if(e.target.files[0]) importCahierData(e.target.files[0]);
+  e.target.value = '';
+});
 
 document.querySelectorAll('.tab').forEach(t=>{
   t.addEventListener('click', ()=>{
@@ -1177,8 +1396,6 @@ function escapeHtml(str){
   d.textContent = str;
   return d.innerHTML;
 }
-
-loadData();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
