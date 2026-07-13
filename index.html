@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Cahier d'appel</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#25344B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cahier d'appel">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap');
+
+:root{
+  --paper:#F7F3E7;
+  --ink:#25344B;
+  --ink-soft:#5B6B85;
+  --margin-red:#B8493F;
+  --grid-blue:#B9CFE0;
+  --gold:#C0923B;
+  --absent:#C8574A;
+  --absent-bg:#F7E4E1;
+  --present-green:#3E6350;
+  --surface:#FFFFFF;
+  --border:#DCD4C0;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'Inter',sans-serif;
+  min-height:100vh;
+}
+.app{
+  max-width:920px;
+  margin:0 auto;
+  padding:0 0 4rem;
+}
+.masthead{
+  background:var(--ink);
+  color:var(--paper);
+  padding:1.6rem 2rem 1.4rem;
+  position:relative;
+  overflow:hidden;
+}
+.masthead::before{
+  content:"";
+  position:absolute;
+  left:38px;top:0;bottom:0;
+  width:1px;
+  background:var(--margin-red);
+  opacity:.55;
+}
+.masthead h1{
+  font-family:'Fraunces',serif;
+  font-weight:600;
+  font-size:1.7rem;
+  margin:0 0 .15rem 56px;
+  letter-spacing:.2px;
+}
+.masthead p{
+  margin:0 0 0 56px;
+  font-size:.85rem;
+  color:#C9D3C7;
+  opacity:.85;
+}
+
+.tabs{
+  display:flex;
+  gap:0;
+  padding:0 1.5rem;
+  margin-top:-1px;
+  background:var(--paper);
+  border-bottom:2px solid var(--ink);
+}
+.tab{
+  font-family:'Fraunces',serif;
+  font-weight:500;
+  font-size:.95rem;
+  padding:.85rem 1.3rem .65rem;
+  cursor:pointer;
+  color:var(--ink-soft);
+  background:transparent;
+  border:none;
+  border-radius:10px 10px 0 0;
+  position:relative;
+  top:2px;
+}
+.tab.active{
+  color:var(--ink);
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-bottom:2px solid var(--surface);
+}
+
+.panel{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-top:none;
+  padding:1.8rem 2rem 2.2rem 2.5rem;
+  position:relative;
+  background-image:repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 26px,
+    var(--grid-blue) 27px
+  );
+  background-position: 0 4px;
+  background-size: 100% 27px;
+}
+.panel::before{
+  content:"";
+  position:absolute;
+  left:56px; top:0; bottom:0;
+  width:1px;
+  background:var(--margin-red);
+  opacity:.4;
+}
+.panel > *{ position:relative; }
+
+h2.section-title{
+  font-family:'Fraunces',serif;
+  font-weight:600;
+  font-size:1.2rem;
+  margin:0 0 1rem;
+}
+
+.row{
+  display:flex;
+  gap:.9rem;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-bottom:1.1rem;
+}
+label.field-label{
+  font-size:.78rem;
+  color:var(--ink-soft);
+  text-transform:uppercase;
+  letter-spacing:.05em;
+  display:block;
+  margin-bottom:.25rem;
+}
+input[type=date], input[type=text], input[type=month], select{
+  font-family:'Inter',sans-serif;
+  font-size:.9rem;
+  padding:.5rem .65rem;
+  border:1px solid var(--border);
+  border-radius:6px;
+  background:#FCFAF3;
+  color:var(--ink);
+}
+input:focus, select:focus{ outline:2px solid var(--gold); outline-offset:1px; }
+
+.class-pills{
+  display:flex;
+  gap:.5rem;
+  flex-wrap:wrap;
+  margin-bottom:1.3rem;
+}
+.pill{
+  padding:.4rem .95rem;
+  border:1px solid var(--border);
+  border-radius:999px;
+  background:#FCFAF3;
+  cursor:pointer;
+  font-size:.85rem;
+  color:var(--ink-soft);
+}
+.pill.active{
+  background:var(--ink);
+  color:var(--paper);
+  border-color:var(--ink);
+}
+
+.status-line{
+  font-size:.85rem;
+  color:var(--ink-soft);
+  margin-bottom:1rem;
+}
+.status-line b{ color:var(--present-green); }
+.status-line b.taken{ color:var(--gold); }
+
+.student-list{
+  border:1px solid var(--border);
+  border-radius:8px;
+  overflow:hidden;
+  margin-bottom:1.3rem;
+  background:#FEFDF9;
+}
+.student-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:.65rem 1rem;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;
+}
+.student-row:last-child{ border-bottom:none; }
+.student-row:hover{ background:#F3EEDF; }
+.student-row.absent{ background:var(--absent-bg); }
+.student-name{ font-size:.92rem; }
+.student-tag{
+  font-size:.72rem;
+  padding:.2rem .55rem;
+  border-radius:999px;
+  border:1px solid transparent;
+  color:var(--present-green);
+  background:#E5F0E9;
+}
+.student-row.absent .student-tag{
+  color:var(--absent);
+  background:#F3D6D1;
+}
+
+button{
+  font-family:'Inter',sans-serif;
+  font-weight:500;
+  font-size:.88rem;
+  padding:.6rem 1.2rem;
+  border-radius:7px;
+  border:1px solid var(--ink);
+  background:var(--ink);
+  color:var(--paper);
+  cursor:pointer;
+}
+button.secondary{
+  background:transparent;
+  color:var(--ink);
+}
+button.ghost{
+  background:transparent;
+  color:var(--ink-soft);
+  border-color:var(--border);
+  padding:.4rem .8rem;
+  font-size:.8rem;
+}
+button.danger-ghost{
+  background:transparent;
+  color:var(--absent);
+  border-color:var(--absent);
+  padding:.35rem .7rem;
+  font-size:.78rem;
+}
+button:disabled{ opacity:.45; cursor:not-allowed; }
+
+.empty{
+  color:var(--ink-soft);
+  font-size:.88rem;
+  font-style:italic;
+  padding:1rem 0;
+}
+
+.class-card{
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:1rem 1.2rem;
+  margin-bottom:1rem;
+  background:#FEFDF9;
+}
+.class-card-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:.7rem;
+}
+.class-card-head h3{
+  font-family:'Fraunces',serif;
+  font-size:1.02rem;
+  margin:0;
+}
+.student-chip-list{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.4rem;
+  margin-bottom:.7rem;
+}
+.chip{
+  display:flex;
+  align-items:center;
+  gap:.4rem;
+  background:#EFEADA;
+  border-radius:999px;
+  padding:.3rem .35rem .3rem .75rem;
+  font-size:.82rem;
+}
+.chip button{
+  border:none;
+  background:transparent;
+  color:var(--ink-soft);
+  padding:0 .3rem;
+  font-size:.9rem;
+  line-height:1;
+}
+.add-line{
+  display:flex;
+  gap:.5rem;
+}
+.add-line input{ flex:1; }
+
+.import-student-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+  gap:.35rem .8rem;
+  max-height:280px;
+  overflow-y:auto;
+  padding:.4rem 0;
+}
+.import-student-row{
+  display:flex;
+  align-items:center;
+  gap:.5rem;
+  font-size:.85rem;
+}
+.import-student-row input[type=text]{
+  flex:1;
+  padding:.3rem .5rem;
+  font-size:.83rem;
+}
+
+#print-area{ display:none; }
+
+@media print{
+  body > *:not(#print-area){ display:none !important; }
+  #print-area{ display:block !important; }
+  body{ background:#fff; }
+}
+
+.pheader{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  font-family:'Fraunces',serif;
+  font-size:16px;
+  font-weight:600;
+  color:#25344B;
+  border-bottom:2px solid #25344B;
+  padding-bottom:6px;
+  margin-bottom:10px;
+}
+.pgrid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}
+.pblock{
+  border:1px solid #DCD4C0;
+  border-radius:6px;
+  padding:6px 7px;
+  page-break-inside:avoid;
+  break-inside:avoid;
+}
+.pblock-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  margin-bottom:4px;
+}
+.pblock-name{
+  font-family:'Fraunces',serif;
+  font-weight:600;
+  font-size:11px;
+  color:#25344B;
+}
+.pblock-rate{
+  font-size:8px;
+  color:#5B6B85;
+}
+.pcal-grid{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:1px;
+  margin-bottom:4px;
+}
+.pcal-dow{
+  font-size:6.5px;
+  text-align:center;
+  color:#9A947F;
+}
+.pcal-cell{
+  aspect-ratio:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  font-size:7px;
+  border-radius:2px;
+  color:#5B6B85;
+  line-height:1;
+}
+.pcal-cell.pcal-ok{ background:#E5F0E9; color:#3E6350; }
+.pcal-cell.pcal-absent{ background:#F3D6D1; color:#8C332A; font-weight:600; }
+.pcal-cell.pcal-absent span{ font-size:6px; }
+.pstudents{
+  display:flex;
+  flex-wrap:wrap;
+  gap:2px 6px;
+  font-size:8px;
+  color:#25344B;
+  border-top:1px solid #EFEADA;
+  padding-top:3px;
+}
+.pstudents.pempty{ color:#9A947F; font-style:italic; }
+
+.stat-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:.8rem;
+  margin-bottom:1.6rem;
+}
+.stat-card{
+  background:#FEFDF9;
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:.9rem 1rem;
+}
+.stat-card .label{
+  font-size:.72rem;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+  color:var(--ink-soft);
+  margin-bottom:.3rem;
+}
+.stat-card .value{
+  font-family:'Fraunces',serif;
+  font-size:1.5rem;
+  font-weight:600;
+}
+.stat-card .value.rate-high{ color:var(--absent); }
+.stat-card .value.rate-ok{ color:var(--present-green); }
+
+table.report{
+  width:100%;
+  border-collapse:collapse;
+  font-size:.87rem;
+  margin-bottom:1.5rem;
+}
+table.report th{
+  text-align:left;
+  font-size:.72rem;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  color:var(--ink-soft);
+  padding:.5rem .6rem;
+  border-bottom:2px solid var(--ink);
+}
+table.report td{
+  padding:.55rem .6rem;
+  border-bottom:1px solid var(--border);
+}
+table.report tr:last-child td{ border-bottom:none; }
+table.report td.num{ text-align:right; font-variant-numeric:tabular-nums; }
+.bar-track{
+  background:#EFEADA;
+  border-radius:4px;
+  height:8px;
+  width:100%;
+  overflow:hidden;
+}
+.bar-fill{
+  height:100%;
+  background:var(--absent);
+  border-radius:4px;
+}
+
+.small-note{
+  font-size:.78rem;
+  color:var(--ink-soft);
+  margin-top:-.4rem;
+  margin-bottom:1.2rem;
+}
+
+.table-wrap{
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  margin-bottom:1.5rem;
+}
+.table-wrap table.report{ margin-bottom:0; min-width:340px; }
+
+@media (max-width: 640px){
+  .masthead{ padding:1.2rem 1rem 1.1rem; }
+  .masthead::before{ left:20px; }
+  .masthead h1{ margin-left:34px; font-size:1.35rem; }
+  .masthead p{ margin-left:34px; font-size:.78rem; }
+  .tabs{ padding:0 .6rem; }
+  .tab{ padding:.8rem .8rem .6rem; font-size:.88rem; flex:1; text-align:center; }
+  .panel{ padding:1.3rem 1rem 1.8rem 1.7rem; background-size:100% 25px; }
+  .panel::before{ left:34px; }
+  h2.section-title{ font-size:1.05rem; }
+  .row{ gap:.6rem; }
+  input[type=date], input[type=text], input[type=month], select, button{
+    font-size:16px;
+    padding:.65rem .8rem;
+  }
+  button{ min-height:44px; }
+  .pill{ padding:.55rem 1rem; font-size:.85rem; }
+  .student-row{ padding:.85rem 1rem; min-height:44px; }
+  .class-card{ padding:.9rem 1rem; }
+  .class-card-head{ flex-wrap:wrap; gap:.5rem; }
+  .class-card-head h3{ font-size:.95rem; }
+  .import-student-grid{ grid-template-columns:1fr; max-height:340px; }
+  .stat-grid{ grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }
+  .add-line{ flex-wrap:wrap; }
+  .add-line input{ width:100%; }
+}
+
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="masthead">
+    <h1>Cahier d'appel</h1>
+    <p>Suivi quotidien des absences &mdash; zone B</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="appel">Aujourd'hui</button>
+    <button class="tab" data-tab="classes">Classes</button>
+    <button class="tab" data-tab="stats">Statistiques</button>
+  </div>
+
+  <div class="panel" id="panel-appel"></div>
+  <div class="panel" id="panel-classes" style="display:none"></div>
+  <div class="panel" id="panel-stats" style="display:none"></div>
+
+</div>
+
+<div id="print-area"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+if(window.pdfjsLib){
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+}
+let DATA = { classes: [], absences: {} };
+let importCandidates = [];
+let ui = { tab:'appel', selectedClass:null, selectedDate: todayISO(), statMonth: currentMonth(), statClass:'ALL' };
+
+function todayISO(){
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+function currentMonth(){
+  return todayISO().slice(0,7);
+}
+function uid(){
+  return Math.random().toString(36).slice(2,9);
+}
+
+async function loadData(){
+  try{
+    const raw = localStorage.getItem('cahier-appel-data');
+    if(raw){
+      DATA = JSON.parse(raw);
+    }
+  }catch(e){
+    DATA = { classes: [], absences: {} };
+  }
+  if(DATA.classes.length && !ui.selectedClass){
+    ui.selectedClass = DATA.classes[0].id;
+  }
+  render();
+}
+
+async function saveData(){
+  try{
+    localStorage.setItem('cahier-appel-data', JSON.stringify(DATA));
+  }catch(e){
+    console.error('Erreur d\'enregistrement', e);
+    alert("L'enregistrement a échoué. Si le stockage de votre navigateur est plein ou bloqué (mode navigation privée), les données risquent de ne pas être conservées.");
+  }
+}
+
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    ui.tab = t.dataset.tab;
+    render();
+  });
+});
+
+function render(){
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.classList.toggle('active', t.dataset.tab===ui.tab);
+  });
+  document.getElementById('panel-appel').style.display = ui.tab==='appel' ? 'block':'none';
+  document.getElementById('panel-classes').style.display = ui.tab==='classes' ? 'block':'none';
+  document.getElementById('panel-stats').style.display = ui.tab==='stats' ? 'block':'none';
+
+  if(ui.tab==='appel') renderAppel();
+  if(ui.tab==='classes') renderClasses();
+  if(ui.tab==='stats') renderStats();
+}
+
+function renderAppel(){
+  const panel = document.getElementById('panel-appel');
+  if(DATA.classes.length===0){
+    panel.innerHTML = `
+      <h2 class="section-title">Faire l'appel</h2>
+      <p class="empty">Aucune classe enregistrée. Rendez-vous dans l'onglet <b>Classes</b> pour créer votre première classe et y ajouter des élèves.</p>
+    `;
+    return;
+  }
+  if(!ui.selectedClass || !DATA.classes.find(c=>c.id===ui.selectedClass)){
+    ui.selectedClass = DATA.classes[0].id;
+  }
+  const cls = DATA.classes.find(c=>c.id===ui.selectedClass);
+  const dayRecord = (DATA.absences[ui.selectedDate] && DATA.absences[ui.selectedDate][cls.id]) || null;
+  const absentSet = new Set(dayRecord ? dayRecord.absentIds : []);
+  const taken = dayRecord !== null;
+
+  panel.innerHTML = `
+    <h2 class="section-title">Faire l'appel</h2>
+    <div class="row">
+      <div>
+        <label class="field-label">Date</label>
+        <input type="date" id="date-input" value="${ui.selectedDate}">
+      </div>
+    </div>
+    <label class="field-label">Classe</label>
+    <div class="class-pills" id="pill-row">
+      ${DATA.classes.map((c,i)=>`<button class="pill ${c.id===ui.selectedClass?'active':''}" data-cid="${c.id}">${i+1}. ${escapeHtml(c.name)}</button>`).join('')}
+    </div>
+    <div class="status-line">
+      ${cls.students.length===0
+        ? '<span class="empty">Cette classe n\'a pas encore d\'élèves.</span>'
+        : taken
+          ? `Appel <b class="taken">déjà enregistré</b> pour cette date &mdash; ${absentSet.size} absent${absentSet.size>1?'s':''} sur ${cls.students.length}.`
+          : `Appel <b>non encore enregistré</b> pour cette date.`
+      }
+    </div>
+    ${cls.students.length>0 ? `
+    <div class="student-list" id="student-list">
+      ${cls.students.map(s=>`
+        <div class="student-row ${absentSet.has(s.id)?'absent':''}" data-sid="${s.id}">
+          <span class="student-name">${escapeHtml(s.name)}</span>
+          <span class="student-tag">${absentSet.has(s.id)?'Absent':'Présent'}</span>
+        </div>
+      `).join('')}
+    </div>
+    <button id="validate-btn">${taken ? 'Mettre à jour l\'appel' : 'Valider l\'appel du jour'}</button>
+    ` : ''}
+  `;
+
+  document.getElementById('date-input').addEventListener('change', e=>{
+    ui.selectedDate = e.target.value;
+    render();
+  });
+  panel.querySelectorAll('#pill-row .pill').forEach(p=>{
+    p.addEventListener('click', ()=>{
+      ui.selectedClass = p.dataset.cid;
+      render();
+    });
+  });
+  const list = document.getElementById('student-list');
+  if(list){
+    let workingAbsent = new Set(absentSet);
+    list.querySelectorAll('.student-row').forEach(row=>{
+      row.addEventListener('click', ()=>{
+        const sid = row.dataset.sid;
+        if(workingAbsent.has(sid)){ workingAbsent.delete(sid); }
+        else{ workingAbsent.add(sid); }
+        row.classList.toggle('absent');
+        row.querySelector('.student-tag').textContent = workingAbsent.has(sid) ? 'Absent' : 'Présent';
+      });
+    });
+    document.getElementById('validate-btn').addEventListener('click', async ()=>{
+      if(!DATA.absences[ui.selectedDate]) DATA.absences[ui.selectedDate] = {};
+      DATA.absences[ui.selectedDate][cls.id] = { absentIds: Array.from(workingAbsent) };
+      await saveData();
+      render();
+    });
+  }
+}
+
+function renderClasses(){
+  const panel = document.getElementById('panel-classes');
+  panel.innerHTML = `
+    <h2 class="section-title">Classes et élèves</h2>
+    <div class="row" style="justify-content:space-between; align-items:flex-start;">
+      <div class="add-line" style="flex:1; min-width:260px;">
+        <input type="text" id="new-class-name" placeholder="Nom de la classe, ex. CE2-A">
+        <button id="add-class-btn">Ajouter une classe</button>
+      </div>
+      <div style="display:flex; gap:.5rem;">
+        <button class="secondary" id="sort-routine-btn">Trier selon ma tournée</button>
+        <button class="secondary" id="import-pdf-btn">Importer un PDF</button>
+        <input type="file" id="pdf-file-input" accept="application/pdf" style="display:none">
+      </div>
+    </div>
+    <p class="small-note">L'ordre des classes ci-dessous est celui utilisé pour l'appel du matin. Utilisez les flèches ▲▼ pour l'ajuster, ou le bouton « Trier selon ma tournée » pour appliquer votre parcours habituel.</p>
+    <p class="small-note" id="import-status" style="display:none;"></p>
+    <div id="import-review-area"></div>
+    <div id="class-cards"></div>
+  `;
+  document.getElementById('sort-routine-btn').addEventListener('click', sortByRoutine);
+  document.getElementById('import-pdf-btn').addEventListener('click', ()=>{
+    document.getElementById('pdf-file-input').click();
+  });
+  document.getElementById('pdf-file-input').addEventListener('change', handlePdfInput);
+  if(importCandidates.length){
+    document.getElementById('import-status').style.display='block';
+    document.getElementById('import-status').textContent = 'Vérifiez et corrigez les listes ci-dessous avant de les importer.';
+    renderImportReview();
+  }
+  document.getElementById('add-class-btn').addEventListener('click', async ()=>{
+    const input = document.getElementById('new-class-name');
+    const name = input.value.trim();
+    if(!name) return;
+    DATA.classes.push({ id: uid(), name, students: [] });
+    await saveData();
+    render();
+  });
+  document.getElementById('new-class-name').addEventListener('keydown', e=>{
+    if(e.key==='Enter') document.getElementById('add-class-btn').click();
+  });
+
+  const cardsEl = document.getElementById('class-cards');
+  if(DATA.classes.length===0){
+    cardsEl.innerHTML = '<p class="empty">Aucune classe pour le moment. Ajoutez-en une ci-dessus.</p>';
+    return;
+  }
+  cardsEl.innerHTML = DATA.classes.map((c,idx)=>`
+    <div class="class-card" data-cid="${c.id}">
+      <div class="class-card-head">
+        <div style="display:flex; align-items:center; gap:.6rem;">
+          <div style="display:flex; flex-direction:column; gap:1px;">
+            <button class="ghost" style="padding:.1rem .4rem; font-size:.7rem; ${idx===0?'visibility:hidden;':''}" data-action="move-up" data-cid="${c.id}">▲</button>
+            <button class="ghost" style="padding:.1rem .4rem; font-size:.7rem; ${idx===DATA.classes.length-1?'visibility:hidden;':''}" data-action="move-down" data-cid="${c.id}">▼</button>
+          </div>
+          <h3>${idx+1}. ${escapeHtml(c.name)}</h3>
+        </div>
+        <button class="danger-ghost" data-action="del-class" data-cid="${c.id}">Supprimer la classe</button>
+      </div>
+      <div class="student-chip-list">
+        ${c.students.length===0 ? '<span class="empty" style="padding:0;">Aucun élève.</span>' :
+          c.students.map(s=>`<span class="chip">${escapeHtml(s.name)}<button data-action="del-student" data-cid="${c.id}" data-sid="${s.id}">✕</button></span>`).join('')}
+      </div>
+      <div class="add-line">
+        <input type="text" placeholder="Nom de l'élève" data-student-input="${c.id}">
+        <button class="secondary" data-action="add-student" data-cid="${c.id}">Ajouter</button>
+      </div>
+    </div>
+  `).join('');
+
+  cardsEl.querySelectorAll('[data-action="move-up"]').forEach(b=>{
+    b.addEventListener('click', ()=> moveClass(b.dataset.cid, -1));
+  });
+  cardsEl.querySelectorAll('[data-action="move-down"]').forEach(b=>{
+    b.addEventListener('click', ()=> moveClass(b.dataset.cid, 1));
+  });
+  cardsEl.querySelectorAll('[data-action="del-class"]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      DATA.classes = DATA.classes.filter(c=>c.id!==b.dataset.cid);
+      if(ui.selectedClass===b.dataset.cid) ui.selectedClass=null;
+      await saveData();
+      render();
+    });
+  });
+  cardsEl.querySelectorAll('[data-action="del-student"]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      const c = DATA.classes.find(c=>c.id===b.dataset.cid);
+      c.students = c.students.filter(s=>s.id!==b.dataset.sid);
+      await saveData();
+      render();
+    });
+  });
+  cardsEl.querySelectorAll('[data-action="add-student"]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      const input = cardsEl.querySelector(`[data-student-input="${b.dataset.cid}"]`);
+      const name = input.value.trim();
+      if(!name) return;
+      const c = DATA.classes.find(c=>c.id===b.dataset.cid);
+      c.students.push({ id: uid(), name });
+      await saveData();
+      render();
+    });
+  });
+  cardsEl.querySelectorAll('[data-student-input]').forEach(inp=>{
+    inp.addEventListener('keydown', e=>{
+      if(e.key==='Enter'){
+        cardsEl.querySelector(`[data-action="add-student"][data-cid="${inp.dataset.studentInput}"]`).click();
+      }
+    });
+  });
+}
+
+async function moveClass(id, dir){
+  const idx = DATA.classes.findIndex(c=>c.id===id);
+  const newIdx = idx+dir;
+  if(idx===-1 || newIdx<0 || newIdx>=DATA.classes.length) return;
+  const tmp = DATA.classes[idx];
+  DATA.classes[idx] = DATA.classes[newIdx];
+  DATA.classes[newIdx] = tmp;
+  await saveData();
+  render();
+}
+
+function normalizeClassCode(name){
+  return name.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');
+}
+
+async function sortByRoutine(){
+  const routine = ['CE1CE2','CE1A','CM1A','CE1B','CE2A','CM1B','CPA','CPC','CPB','CM1CM2','CE2B','CM2A','CM2B'];
+  const withIndex = DATA.classes.map((c,i)=>({ c, i }));
+  withIndex.sort((x,y)=>{
+    const ix = routine.indexOf(normalizeClassCode(x.c.name));
+    const iy = routine.indexOf(normalizeClassCode(y.c.name));
+    const px = ix===-1 ? routine.length+x.i : ix;
+    const py = iy===-1 ? routine.length+y.i : iy;
+    return px-py;
+  });
+  DATA.classes = withIndex.map(w=>w.c);
+  await saveData();
+  render();
+  const unmatched = DATA.classes.filter(c=>!routine.includes(normalizeClassCode(c.name)));
+  if(unmatched.length){
+    alert("Certaines classes n'ont pas pu être reconnues automatiquement et ont été placées à la fin : " + unmatched.map(c=>c.name).join(', ') + ". Utilisez les flèches ▲▼ pour les repositionner.");
+  }
+}
+
+async function handlePdfInput(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const statusEl = document.getElementById('import-status');
+  statusEl.style.display = 'block';
+  statusEl.textContent = 'Lecture du PDF en cours...';
+  try{
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const candidates = [];
+    for(let p=1; p<=pdf.numPages; p++){
+      const page = await pdf.getPage(p);
+      const textContent = await page.getTextContent();
+      const lines = groupTextIntoLines(textContent);
+      candidates.push(parseLinesToClass(lines, p));
+    }
+    importCandidates = candidates;
+    statusEl.textContent = `${pdf.numPages} page(s) analysée(s). Vérifiez et corrigez les listes ci-dessous avant de les importer.`;
+    renderImportReview();
+  }catch(err){
+    statusEl.textContent = "Impossible de lire ce PDF. Vérifiez qu'il contient bien du texte sélectionnable (pas un scan image).";
+  }
+  e.target.value = '';
+}
+
+function groupTextIntoLines(textContent){
+  const rows = {};
+  textContent.items.forEach(item=>{
+    const y = Math.round(item.transform[5]/3)*3;
+    if(!rows[y]) rows[y] = [];
+    rows[y].push({ x:item.transform[4], str:item.str });
+  });
+  const ys = Object.keys(rows).map(Number).sort((a,b)=>b-a);
+  return ys.map(y=>{
+    return rows[y].sort((a,b)=>a.x-b.x).map(i=>i.str).join(' ').replace(/\s+/g,' ').trim();
+  }).filter(Boolean);
+}
+
+function parseLinesToClass(lines, pageIndex){
+  const classNameRegex = /^(.+?)\s+Nombre d['’]él[èe]ves\s*:/i;
+  const studentLineRegex = /^(.+?)\s+\d{2}\/\d{2}\/\d{4}\s+[MFmf]\s+\S+\s*$/;
+  let className = '';
+  const students = [];
+  lines.forEach(line=>{
+    const clean = line.replace(/^\d+[\.\)]\s*/, '').trim();
+    if(!clean) return;
+    if(!className){
+      const cm = clean.match(classNameRegex);
+      if(cm){ className = cm[1].trim(); return; }
+    }
+    const sm = clean.match(studentLineRegex);
+    if(sm) students.push(sm[1].trim());
+  });
+  if(students.length===0){
+    const noiseRegex = /^(nom|pr[ée]nom|effectif|liste|date|page \d+|[ée]cole|ann[ée]e scolaire|total|classe de|t[ée]l|courriel|enseignant|naissance|\d{5}\s|rue|avenue|chemin|boulevard)/i;
+    lines.forEach(line=>{
+      const clean = line.replace(/^\d+[\.\)]\s*/, '').trim();
+      if(!clean || clean.length<2) return;
+      if(noiseRegex.test(clean)) return;
+      if(/^\d+$/.test(clean)) return;
+      if(/\d{2}\/\d{2}\/\d{4}/.test(clean)) return;
+      students.push(clean);
+    });
+  }
+  if(!className) className = `Classe (page ${pageIndex})`;
+  return { className, students };
+}
+
+function renderImportReview(){
+  const area = document.getElementById('import-review-area');
+  if(!importCandidates.length){ area.innerHTML=''; return; }
+  area.innerHTML = importCandidates.map((c,idx)=>`
+    <div class="class-card" data-idx="${idx}" style="border-color:var(--gold);">
+      <div class="class-card-head">
+        <input type="text" class="import-class-name" data-idx="${idx}" value="${escapeHtml(c.className)}" style="font-family:'Fraunces',serif; font-size:1.02rem; flex:1;">
+        <label style="font-size:.8rem; color:var(--ink-soft); display:flex; align-items:center; gap:.4rem;">
+          <input type="checkbox" class="import-include" data-idx="${idx}" checked> Importer la classe
+        </label>
+      </div>
+      <label class="field-label">${c.students.length} élève${c.students.length>1?'s':''} détecté${c.students.length>1?'s':''} &mdash; décochez ceux à ne pas importer, corrigez les noms si besoin</label>
+      <div class="import-student-grid" data-idx="${idx}">
+        ${c.students.map((name,sidx)=>`
+          <label class="import-student-row">
+            <input type="checkbox" class="import-student-check" data-cidx="${idx}" data-sidx="${sidx}" checked>
+            <input type="text" class="import-student-name" data-cidx="${idx}" data-sidx="${sidx}" value="${escapeHtml(name)}">
+          </label>
+        `).join('')}
+      </div>
+      <button class="ghost" data-action="add-import-row" data-cidx="${idx}" style="margin-top:.6rem;">+ Ajouter un élève</button>
+    </div>
+  `).join('') + `
+    <div class="row">
+      <button id="confirm-import-btn">Créer ${importCandidates.length>1?'ces classes':'cette classe'}</button>
+      <button class="ghost" id="cancel-import-btn">Annuler</button>
+    </div>
+  `;
+  document.getElementById('confirm-import-btn').addEventListener('click', confirmImport);
+  document.getElementById('cancel-import-btn').addEventListener('click', ()=>{
+    importCandidates = [];
+    document.getElementById('import-status').style.display='none';
+    renderImportReview();
+  });
+  area.querySelectorAll('[data-action="add-import-row"]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const grid = area.querySelector(`.import-student-grid[data-idx="${btn.dataset.cidx}"]`);
+      const sidx = grid.querySelectorAll('.import-student-row').length;
+      const row = document.createElement('label');
+      row.className = 'import-student-row';
+      row.innerHTML = `
+        <input type="checkbox" class="import-student-check" data-cidx="${btn.dataset.cidx}" data-sidx="${sidx}" checked>
+        <input type="text" class="import-student-name" data-cidx="${btn.dataset.cidx}" data-sidx="${sidx}" value="" placeholder="Nom Prénom">
+      `;
+      grid.appendChild(row);
+      row.querySelector('.import-student-name').focus();
+    });
+  });
+}
+
+async function confirmImport(){
+  const area = document.getElementById('import-review-area');
+  area.querySelectorAll('.class-card').forEach(card=>{
+    const include = card.querySelector('.import-include').checked;
+    if(!include) return;
+    const name = card.querySelector('.import-class-name').value.trim();
+    const studentNames = [];
+    card.querySelectorAll('.import-student-row').forEach(row=>{
+      const checked = row.querySelector('.import-student-check').checked;
+      const val = row.querySelector('.import-student-name').value.trim();
+      if(checked && val) studentNames.push(val);
+    });
+    if(!name || studentNames.length===0) return;
+    DATA.classes.push({
+      id: uid(),
+      name,
+      students: studentNames.map(n=>({ id: uid(), name: n }))
+    });
+  });
+  importCandidates = [];
+  document.getElementById('import-status').style.display='none';
+  await saveData();
+  render();
+}
+
+function computeClassStats(month, classesList){
+  return classesList.map(c=>{
+    let daysTaken = 0, totalAbsences = 0;
+    const perStudent = {};
+    const perDay = {};
+    c.students.forEach(s=> perStudent[s.id] = 0);
+    Object.keys(DATA.absences).forEach(date=>{
+      if(!date.startsWith(month)) return;
+      const rec = DATA.absences[date][c.id];
+      if(!rec) return;
+      daysTaken++;
+      totalAbsences += rec.absentIds.length;
+      perDay[date] = rec.absentIds.length;
+      rec.absentIds.forEach(sid=>{
+        if(perStudent[sid]===undefined) perStudent[sid]=0;
+        perStudent[sid]++;
+      });
+    });
+    const nbStudents = c.students.length || 1;
+    const rate = daysTaken>0 ? (totalAbsences/(nbStudents*daysTaken))*100 : 0;
+    return { cls:c, daysTaken, totalAbsences, rate, perStudent, perDay };
+  });
+}
+
+function renderStats(){
+  const panel = document.getElementById('panel-stats');
+  if(DATA.classes.length===0){
+    panel.innerHTML = `
+      <h2 class="section-title">Statistiques</h2>
+      <p class="empty">Ajoutez des classes et faites l'appel pour voir apparaître des statistiques ici.</p>
+    `;
+    return;
+  }
+  panel.innerHTML = `
+    <h2 class="section-title">Statistiques</h2>
+    <div class="row" style="justify-content:space-between; align-items:flex-end;">
+      <div class="row" style="margin-bottom:0;">
+        <div>
+          <label class="field-label">Mois</label>
+          <input type="month" id="month-input" value="${ui.statMonth}">
+        </div>
+        <div>
+          <label class="field-label">Classe</label>
+          <select id="class-select">
+            <option value="ALL">Toutes les classes</option>
+            ${DATA.classes.map(c=>`<option value="${c.id}" ${ui.statClass===c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <button class="secondary" id="export-pdf-btn">Exporter le mois en PDF</button>
+    </div>
+    <div id="stats-body"></div>
+  `;
+  document.getElementById('month-input').value = ui.statMonth;
+  document.getElementById('class-select').value = ui.statClass;
+
+  document.getElementById('month-input').addEventListener('change', e=>{
+    ui.statMonth = e.target.value;
+    renderStats();
+  });
+  document.getElementById('class-select').addEventListener('change', e=>{
+    ui.statClass = e.target.value;
+    renderStats();
+  });
+  document.getElementById('export-pdf-btn').addEventListener('click', ()=>{
+    exportMonthToPdf(ui.statMonth);
+  });
+
+  const body = document.getElementById('stats-body');
+  const month = ui.statMonth;
+  const classesToShow = ui.statClass==='ALL' ? DATA.classes : DATA.classes.filter(c=>c.id===ui.statClass);
+  const classStats = computeClassStats(month, classesToShow);
+
+  if(classStats.every(cs=>cs.daysTaken===0)){
+    body.innerHTML = '<p class="empty">Aucun appel enregistré pour ce mois.</p>';
+    return;
+  }
+
+  const summaryCards = classStats.map(cs=>`
+    <div class="stat-card">
+      <div class="label">${escapeHtml(cs.cls.name)}</div>
+      <div class="value ${cs.rate>=10?'rate-high':'rate-ok'}">${cs.daysTaken>0 ? cs.rate.toFixed(1)+'%' : '—'}</div>
+      <div class="small-note" style="margin:.2rem 0 0;">${cs.totalAbsences} absence${cs.totalAbsences>1?'s':''} · ${cs.daysTaken} jour${cs.daysTaken>1?'s':''} d'appel</div>
+    </div>
+  `).join('');
+
+  let rateTable = '';
+  if(ui.statClass==='ALL' && classesToShow.length>1){
+    rateTable = `
+      <div class="table-wrap">
+      <table class="report">
+        <thead><tr><th>Classe</th><th style="width:40%">Taux d'absence</th><th class="num">%</th></tr></thead>
+        <tbody>
+          ${classStats.map(cs=>`
+            <tr>
+              <td>${escapeHtml(cs.cls.name)}</td>
+              <td><div class="bar-track"><div class="bar-fill" style="width:${Math.min(cs.rate,100).toFixed(1)}%"></div></div></td>
+              <td class="num">${cs.daysTaken>0 ? cs.rate.toFixed(1)+'%' : '—'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      </div>
+    `;
+  }
+
+  const studentRows = [];
+  classStats.forEach(cs=>{
+    cs.cls.students.forEach(s=>{
+      const count = cs.perStudent[s.id] || 0;
+      if(count>0){
+        studentRows.push({ className: cs.cls.name, name: s.name, count });
+      }
+    });
+  });
+  studentRows.sort((a,b)=> b.count - a.count);
+
+  const studentTable = studentRows.length===0
+    ? '<p class="empty">Aucune absence individuelle enregistrée ce mois-ci.</p>'
+    : `
+      <div class="table-wrap">
+      <table class="report">
+        <thead><tr>
+          <th>Élève</th>
+          ${ui.statClass==='ALL' ? '<th>Classe</th>' : ''}
+          <th class="num">Absences</th>
+        </tr></thead>
+        <tbody>
+          ${studentRows.map(r=>`
+            <tr>
+              <td>${escapeHtml(r.name)}</td>
+              ${ui.statClass==='ALL' ? `<td>${escapeHtml(r.className)}</td>` : ''}
+              <td class="num">${r.count}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      </div>
+    `;
+
+  body.innerHTML = `
+    <div class="stat-grid">${summaryCards}</div>
+    ${rateTable}
+    <h2 class="section-title" style="font-size:1.05rem;">Absences par élève</h2>
+    ${studentTable}
+  `;
+}
+
+const MONTH_NAMES = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+
+function buildMiniCalendar(month, perDay){
+  const [y,m] = month.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const firstDow = (new Date(y, m-1, 1).getDay() + 6) % 7;
+  let cells = '';
+  for(let i=0;i<firstDow;i++) cells += '<div></div>';
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const count = perDay[dateStr];
+    if(count===undefined){
+      cells += `<div class="pcal-cell pcal-empty">${d}</div>`;
+    }else if(count===0){
+      cells += `<div class="pcal-cell pcal-ok">${d}</div>`;
+    }else{
+      cells += `<div class="pcal-cell pcal-absent">${d}<span>${count}</span></div>`;
+    }
+  }
+  return `<div class="pcal-grid">
+    <div class="pcal-dow">L</div><div class="pcal-dow">M</div><div class="pcal-dow">M</div><div class="pcal-dow">J</div><div class="pcal-dow">V</div><div class="pcal-dow">S</div><div class="pcal-dow">D</div>
+    ${cells}
+  </div>`;
+}
+
+function exportMonthToPdf(month){
+  if(DATA.classes.length===0){ alert("Aucune classe à exporter."); return; }
+  const classStats = computeClassStats(month, DATA.classes);
+  const [y,m] = month.split('-').map(Number);
+  const monthLabel = `${MONTH_NAMES[m-1]} ${y}`;
+
+  const blocks = classStats.map(cs=>{
+    const studentLines = Object.entries(cs.perStudent)
+      .map(([sid,count])=>({ name: (cs.cls.students.find(s=>s.id===sid)||{}).name || '', count }))
+      .filter(r=>r.count>0)
+      .sort((a,b)=>b.count-a.count);
+    return `
+      <div class="pblock">
+        <div class="pblock-head">
+          <span class="pblock-name">${escapeHtml(cs.cls.name)}</span>
+          <span class="pblock-rate">${cs.daysTaken>0 ? cs.rate.toFixed(1)+'%' : 'aucun appel'} ${cs.daysTaken>0 ? `· ${cs.totalAbsences} absence${cs.totalAbsences>1?'s':''} · ${cs.daysTaken} j.` : ''}</span>
+        </div>
+        ${buildMiniCalendar(month, cs.perDay)}
+        ${studentLines.length ? `<div class="pstudents">${studentLines.map(r=>`<span>${escapeHtml(r.name)} <b>${r.count}</b></span>`).join('')}</div>` : '<div class="pstudents pempty">Aucune absence</div>'}
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('print-area').innerHTML = `
+    <div class="pheader">
+      <span>Cahier d'appel</span>
+      <span>${monthLabel}</span>
+    </div>
+    <div class="pgrid">${blocks}</div>
+  `;
+  setTimeout(()=> window.print(), 60);
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+loadData();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
