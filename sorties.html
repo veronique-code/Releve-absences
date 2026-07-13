@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carnet des sorties scolaires</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
+
+:root{
+  --paper:#FAF5EB;
+  --paper-dark:#F1E8D8;
+  --ink:#2B3A3A;
+  --ink-soft:#5B6B68;
+  --forest:#33564A;
+  --forest-dark:#233B33;
+  --ochre:#C08A2E;
+  --ochre-light:#E9C77C;
+  --terracotta:#B5543A;
+  --line:#DCD0B8;
+  --card:#FFFFFF;
+  --done:#3E7A5B;
+  --pending:#C0522F;
+  --shadow: 0 2px 10px rgba(43,58,58,0.08);
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'Inter',system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.display{font-family:'Fraunces',serif;}
+
+.wrap{max-width:1180px;margin:0 auto;padding:28px 24px 80px;}
+
+/* HEADER */
+header.top{
+  display:flex;justify-content:space-between;align-items:flex-end;
+  gap:20px;flex-wrap:wrap;
+  border-bottom:2px solid var(--forest);
+  padding-bottom:18px;margin-bottom:26px;
+}
+header.top .title-block{display:flex;align-items:center;gap:14px;}
+.tab-mark{
+  width:14px;height:44px;background:var(--ochre);
+  border-radius:3px;
+  box-shadow:2px 2px 0 var(--forest-dark);
+}
+header.top h1{font-size:28px;margin:0;font-weight:700;color:var(--forest-dark);letter-spacing:0.2px;}
+header.top .subtitle{font-size:13px;color:var(--ink-soft);margin-top:2px;}
+.year-badge{
+  font-family:'Fraunces',serif;font-size:15px;font-weight:600;
+  color:var(--forest-dark); background:var(--ochre-light);
+  padding:6px 14px;border-radius:20px;
+}
+
+/* STATS */
+.stats{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:26px;}
+.stat-card{
+  background:var(--card);border:1px solid var(--line);border-radius:10px;
+  padding:14px 20px;min-width:150px;box-shadow:var(--shadow);
+}
+.stat-card .num{font-family:'Fraunces',serif;font-size:26px;font-weight:700;color:var(--forest-dark);}
+.stat-card .lbl{font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;}
+.stat-card.warn .num{color:var(--pending);}
+
+/* ALERTES */
+.alert-banner{
+  background:#FBEDE8;border:1px solid #E7C0AE;border-radius:12px;
+  padding:16px 20px;margin-bottom:24px;
+}
+.alert-banner-head{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  cursor:pointer;
+}
+.alert-banner-title{
+  display:flex;align-items:center;gap:9px;font-weight:700;color:var(--terracotta);
+  font-size:14.5px;
+}
+.alert-banner-title .dot{
+  width:9px;height:9px;border-radius:50%;background:var(--pending);
+  box-shadow:0 0 0 4px rgba(181,84,58,0.18);
+}
+.alert-toggle{background:none;border:none;color:var(--terracotta);font-size:12.5px;font-weight:600;cursor:pointer;}
+.alert-list{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
+.alert-item{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:#fff;border:1px solid #F0DACB;border-radius:8px;
+  padding:9px 12px;font-size:13px;cursor:pointer;
+}
+.alert-item:hover{background:#FFF7F3;}
+.alert-item .ai-left{display:flex;align-items:center;gap:10px;min-width:0;}
+.alert-item .ai-dest{font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.alert-item .ai-classes{color:var(--ink-soft);font-size:11.5px;flex-shrink:0;}
+.alert-tag{
+  font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px;flex-shrink:0;
+}
+.alert-tag.late{background:#B5543A;color:#fff;}
+.alert-tag.soon{background:var(--ochre);color:#fff;}
+.alert-tag.upcoming{background:var(--paper-dark);color:var(--forest-dark);}
+.alert-more{font-size:12px;color:var(--ink-soft);text-align:center;padding-top:2px;}
+.alert-none{display:none;}
+
+.storage-note{
+  font-size:12px;color:var(--ink-soft);background:var(--paper-dark);
+  border-radius:8px;padding:9px 14px;margin-bottom:20px;line-height:1.5;
+}
+
+.card-badge{
+  position:absolute;top:14px;right:14px;z-index:1;
+  background:var(--pending);color:#fff;font-size:11px;font-weight:700;
+  padding:4px 10px;border-radius:11px;box-shadow:0 1px 4px rgba(0,0,0,0.15);
+  display:flex;align-items:center;gap:5px;
+}
+.card-badge.late{background:var(--terracotta);}
+.card.is-late{border-color:#E7C0AE;}
+
+/* TOOLBAR */
+.toolbar{
+  display:flex;justify-content:space-between;align-items:center;
+  gap:14px;flex-wrap:wrap;margin-bottom:20px;
+}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+select, input[type=text], input[type=date], textarea{
+  font-family:'Inter',sans-serif;font-size:13.5px;
+  border:1px solid var(--line);border-radius:8px;
+  padding:8px 10px;background:#fff;color:var(--ink);
+}
+select:focus, input:focus, textarea:focus{outline:2px solid var(--forest);outline-offset:1px;}
+.btn{
+  font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;
+  border:none;border-radius:8px;padding:10px 18px;cursor:pointer;
+  transition:transform .1s ease, box-shadow .15s ease;
+}
+.btn:active{transform:translateY(1px);}
+.btn-primary{background:var(--forest);color:#fff;box-shadow:var(--shadow);}
+.btn-primary:hover{background:var(--forest-dark);}
+.btn-ghost{background:transparent;color:var(--forest-dark);border:1px solid var(--line);}
+.btn-ghost:hover{background:var(--paper-dark);}
+.btn-small{padding:6px 12px;font-size:12.5px;border-radius:6px;}
+.btn-danger-ghost{background:transparent;color:var(--terracotta);border:1px solid var(--line);}
+.btn-danger-ghost:hover{background:#FBEDE8;}
+
+/* GRID */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px;}
+
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:12px;
+  box-shadow:var(--shadow);position:relative;overflow:hidden;
+  display:flex;flex-direction:column;
+}
+.card .tab{
+  position:absolute;top:0;left:18px;width:30px;height:10px;
+  border-radius:0 0 5px 5px;
+}
+.card-head{padding:20px 18px 10px;}
+.card-head .dest{font-family:'Fraunces',serif;font-size:18px;font-weight:600;color:var(--forest-dark);margin:0 0 4px;}
+.card-head .meta{font-size:12.5px;color:var(--ink-soft);display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.meta-tag{
+  font-size:11px;font-weight:700;padding:3px 9px;border-radius:11px;
+  display:inline-flex;align-items:center;gap:4px;
+}
+.meta-tag.ok{background:#E4F0E9;color:var(--done);}
+.meta-tag.pending{background:#FBEDE8;color:var(--pending);}
+.meta-tag.muted{background:var(--paper-dark);color:var(--ink-soft);font-weight:600;}
+.card-head .classes{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;}
+.chip{
+  font-size:11px;font-weight:600;padding:3px 9px;border-radius:12px;
+  background:var(--paper-dark);color:var(--forest-dark);
+}
+.progress-row{padding:0 18px;margin:10px 0 4px;}
+.progress-bar{height:6px;border-radius:4px;background:var(--paper-dark);overflow:hidden;}
+.progress-bar .fill{height:100%;background:var(--done);border-radius:4px;transition:width .2s ease;}
+.progress-label{font-size:11px;color:var(--ink-soft);margin-top:4px;}
+
+.steps{padding:8px 18px 14px;display:flex;flex-direction:column;gap:6px;flex:1;}
+.step{
+  display:flex;align-items:center;gap:9px;font-size:13px;padding:6px 8px;border-radius:7px;
+  cursor:pointer;user-select:none;
+}
+.step:hover{background:var(--paper-dark);}
+.step .box{
+  width:17px;height:17px;border-radius:5px;border:1.5px solid var(--ink-soft);
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:#fff;
+}
+.step.done .box{background:var(--done);border-color:var(--done);}
+.step.pending .box{border-color:var(--pending);}
+.step .lbl{flex:1;color:var(--ink);}
+.step.done .lbl{color:var(--ink-soft);text-decoration:line-through;text-decoration-color:var(--line);}
+.step .date-input{
+  font-size:11px;padding:3px 6px;width:112px;border-radius:5px;
+}
+
+.card-notes{padding:0 18px 12px;font-size:12.5px;color:var(--ink-soft);font-style:italic;}
+.card-foot{
+  border-top:1px solid var(--line);padding:10px 18px;
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--paper);
+}
+
+.empty{
+  text-align:center;padding:70px 20px;color:var(--ink-soft);
+}
+.empty .display{font-size:22px;color:var(--forest-dark);margin-bottom:8px;}
+
+/* MODAL */
+.overlay{
+  position:fixed;inset:0;background:rgba(35,59,51,0.45);
+  display:flex;align-items:center;justify-content:center;z-index:50;
+  padding:20px;
+}
+.modal{
+  background:var(--paper);border-radius:14px;max-width:600px;width:100%;
+  max-height:88vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.25);
+  border:1px solid var(--line);
+}
+.modal-head{
+  padding:20px 24px;border-bottom:2px solid var(--forest);
+  display:flex;justify-content:space-between;align-items:center;
+  position:sticky;top:0;background:var(--paper);z-index:2;
+}
+.modal-head h2{margin:0;font-size:20px;color:var(--forest-dark);}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-soft);}
+.modal-body{padding:20px 24px 26px;}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--forest-dark);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.03em;}
+.field input, .field select, .field textarea{width:100%;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.class-picker{display:flex;flex-wrap:wrap;gap:7px;}
+.class-opt{
+  font-size:12px;padding:6px 11px;border-radius:14px;border:1px solid var(--line);
+  cursor:pointer;background:#fff;color:var(--ink);user-select:none;
+}
+.class-opt.selected{background:var(--forest);color:#fff;border-color:var(--forest);}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;
+  padding:9px 0;border-bottom:1px solid var(--line);
+}
+.toggle-row:last-child{border-bottom:none;}
+.switch{
+  width:38px;height:22px;border-radius:12px;background:var(--line);position:relative;cursor:pointer;flex-shrink:0;
+}
+.switch.on{background:var(--forest);}
+.switch::after{
+  content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;background:#fff;
+  border-radius:50%;transition:left .15s ease;
+}
+.switch.on::after{left:18px;}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;}
+
+@media (max-width:640px){
+  .row2{grid-template-columns:1fr;}
+  header.top{flex-direction:column;align-items:flex-start;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="title-block">
+      <div class="tab-mark"></div>
+      <div>
+        <h1>Carnet des sorties scolaires</h1>
+        <div class="subtitle">École élémentaire Jean Aicard — La Garde</div>
+      </div>
+    </div>
+    <div class="year-badge">Année 2026–2027</div>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="alert-banner alert-none" id="alertBanner">
+    <div class="alert-banner-head" id="alertBannerHead">
+      <div class="alert-banner-title"><span class="dot"></span><span id="alertBannerTitle">Alertes</span></div>
+      <button class="alert-toggle" id="alertToggleBtn">Masquer</button>
+    </div>
+    <div class="alert-list" id="alertList"></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="filters">
+      <select id="filterClasse"></select>
+      <select id="filterStatut">
+        <option value="toutes">Toutes les sorties</option>
+        <option value="avenir">À venir</option>
+        <option value="passees">Passées</option>
+        <option value="attente">Actions en attente</option>
+        <option value="completes">Complètes</option>
+        <option value="cantine_attente">Cantine à annuler</option>
+      </select>
+      <select id="sortOrder">
+        <option value="date_asc">Date ↑</option>
+        <option value="date_desc">Date ↓</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-ghost" id="btnExport">⬇ Exporter</button>
+      <button class="btn btn-ghost" id="btnImport">⬆ Importer</button>
+      <input type="file" id="fileImport" accept="application/json" style="display:none;">
+      <button class="btn btn-primary" id="btnAdd">+ Nouvelle sortie</button>
+    </div>
+  </div>
+
+  <div class="storage-note" id="storageNote">
+    💾 Vos données sont enregistrées dans <strong>ce navigateur, sur cet ordinateur</strong>. Si vous changez d'appareil ou de navigateur, utilisez « Exporter » puis « Importer » pour transférer votre carnet.
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="emptyState" style="display:none;">
+    <div class="display">Aucune sortie enregistrée</div>
+    <div>Cliquez sur « + Nouvelle sortie » pour commencer votre carnet.</div>
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" style="display:none;">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modalTitle">Nouvelle sortie</h2>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Destination</label>
+        <input type="text" id="fDestination" placeholder="Ex. Musée de la mer, Sanary">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Date de la sortie</label>
+          <input type="date" id="fDate">
+        </div>
+        <div class="field">
+          <label>Horaires</label>
+          <input type="text" id="fHoraires" placeholder="Ex. 9h00 – 16h00">
+        </div>
+      </div>
+      <div class="field">
+        <label>Classes concernées</label>
+        <div class="class-picker" id="classPicker"></div>
+      </div>
+      <div class="field">
+        <label>Transport</label>
+        <select id="fTransport">
+          <option value="aucun">Aucun / sur place</option>
+          <option value="pied">À pied</option>
+          <option value="bus_mairie">Bus mairie</option>
+          <option value="autre_bus">Autre bus</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Annulation cantine nécessaire ?</label>
+        <div class="toggle-row">
+          <span style="font-size:13px;">La sortie a lieu sur le temps du déjeuner</span>
+          <div class="switch" id="fCantineToggle"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Suivi des étapes</label>
+        <div class="toggle-row">
+          <span>Autorisation de sortie signée</span>
+          <div class="switch" id="s_autorisation"></div>
+        </div>
+        <div class="toggle-row">
+          <span>Enregistrement sur DEPL</span>
+          <div class="switch" id="s_depl"></div>
+        </div>
+        <div class="toggle-row" id="row_cantine">
+          <span>Annulation cantine faite</span>
+          <div class="switch" id="s_cantine"></div>
+        </div>
+        <div class="toggle-row" id="row_busCommande" style="display:none;">
+          <span>Commande de bus passée</span>
+          <div class="switch" id="s_busCommande"></div>
+        </div>
+        <div class="toggle-row" id="row_busValidation" style="display:none;">
+          <span>Commande de bus validée</span>
+          <div class="switch" id="s_busValidation"></div>
+        </div>
+        <div class="toggle-row">
+          <span>Ajouté à l'agenda</span>
+          <div class="switch" id="s_agenda"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Notes</label>
+        <textarea id="fNotes" rows="2" placeholder="Informations complémentaires..."></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="btnCancel">Annuler</button>
+        <button class="btn btn-primary" id="btnSave">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CLASSES = [
+  "CPA LATRACH","CPB SEYFRIED","CPC OSTROWSKI",
+  "CE1A MONJARDIN","CE1B BASOLO","CE1/CE2 COMBA",
+  "CE2A GRATTAROLA","CE2B MAROLLEAU",
+  "CM1A GONZALEZ","CM1B","CM1/CM2 ODASSO",
+  "CM2A BORGETTO","CM2B BLAISON","ULIS DARDAINE"
+];
+
+const TAB_COLORS = ["#33564A","#C08A2E","#B5543A","#5B7B9C","#7A8B4F","#9C6B9C","#4F8B8B"];
+function tabColorFor(className){
+  let h=0; for(let i=0;i<className.length;i++) h = className.charCodeAt(i)+((h<<5)-h);
+  return TAB_COLORS[Math.abs(h)%TAB_COLORS.length];
+}
+
+const STEP_DEFS = [
+  {key:'autorisation', label:"Autorisation de sortie signée"},
+  {key:'depl', label:"Enregistrement sur DEPL"},
+  {key:'cantine', label:"Annulation cantine faite", conditional:'needsCantine'},
+  {key:'busCommande', label:"Commande de bus passée", conditional:'needsBus'},
+  {key:'busValidation', label:"Commande de bus validée", conditional:'needsBus'},
+  {key:'agenda', label:"Ajouté à l'agenda"}
+];
+
+let sorties = [];
+let editingId = null;
+let modalState = { classes:[], needsCantine:false, steps:{} };
+
+const STORAGE_KEY = 'carnet_sorties_jean_aicard_2026_2027';
+
+async function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    sorties = raw ? JSON.parse(raw) : [];
+  }catch(e){ sorties = []; }
+  render();
+}
+async function saveData(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sorties));
+  }catch(e){
+    console.error('Erreur de sauvegarde', e);
+    alert("La sauvegarde locale a échoué. Pensez à exporter régulièrement vos données (bouton « Exporter »).");
+  }
+}
+
+function exportData(){
+  const blob = new Blob([JSON.stringify(sorties, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'sorties_jean_aicard_' + todayStr() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(file){
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!Array.isArray(data)) throw new Error('format invalide');
+      const mode = sorties.length
+        ? confirm(`Vous avez déjà ${sorties.length} sortie(s) enregistrée(s) ici.\n\nOK = fusionner avec le fichier importé\nAnnuler = remplacer entièrement par le fichier importé`)
+        : true;
+      if(mode && sorties.length){
+        const existingIds = new Set(sorties.map(s=>s.id));
+        data.forEach(s => { if(!existingIds.has(s.id)) sorties.push(s); });
+      }else{
+        sorties = data;
+      }
+      saveData();
+      render();
+      alert('Import terminé : ' + sorties.length + ' sortie(s) au total.');
+    }catch(err){
+      alert("Ce fichier ne peut pas être importé (format JSON invalide).");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+function computeProgress(s){
+  const applicable = STEP_DEFS.filter(d => !d.conditional || s[d.conditional]);
+  const done = applicable.filter(d => s.steps[d.key] && s.steps[d.key].done);
+  return {done: done.length, total: applicable.length};
+}
+
+function populateFilterClasse(){
+  const sel = document.getElementById('filterClasse');
+  sel.innerHTML = '<option value="toutes">Toutes les classes</option>' +
+    CLASSES.map(c=>`<option value="${c}">${c}</option>`).join('');
+}
+
+function render(){
+  const filterClasse = document.getElementById('filterClasse').value || 'toutes';
+  const filterStatut = document.getElementById('filterStatut').value || 'toutes';
+  const sortOrder = document.getElementById('sortOrder').value || 'date_asc';
+
+  let list = sorties.slice();
+  if(filterClasse !== 'toutes'){
+    list = list.filter(s => s.classes.includes(filterClasse));
+  }
+  const today = todayStr();
+  if(filterStatut === 'avenir') list = list.filter(s => s.date >= today);
+  if(filterStatut === 'passees') list = list.filter(s => s.date < today);
+  if(filterStatut === 'attente') list = list.filter(s => { const p=computeProgress(s); return p.done < p.total; });
+  if(filterStatut === 'completes') list = list.filter(s => { const p=computeProgress(s); return p.total>0 && p.done === p.total; });
+  if(filterStatut === 'cantine_attente') list = list.filter(s => s.needsCantine && !(s.steps.cantine && s.steps.cantine.done));
+
+  list.sort((a,b)=> sortOrder==='date_asc' ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date));
+
+  renderStats();
+  renderAlerts();
+
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('emptyState');
+  if(list.length === 0){
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  grid.innerHTML = list.map(s => cardHtml(s)).join('');
+
+  // attach listeners
+  list.forEach(s => {
+    STEP_DEFS.forEach(d=>{
+      const el = document.getElementById(`step_${s.id}_${d.key}`);
+      if(el){
+        el.addEventListener('click', ()=> toggleStepQuick(s.id, d.key));
+      }
+    });
+    const editBtn = document.getElementById(`edit_${s.id}`);
+    if(editBtn) editBtn.addEventListener('click', ()=> openModal(s.id));
+    const delBtn = document.getElementById(`del_${s.id}`);
+    if(delBtn) delBtn.addEventListener('click', ()=> deleteSortie(s.id));
+  });
+}
+
+function renderStats(){
+  const today = todayStr();
+  const total = sorties.length;
+  const avenir = sorties.filter(s=>s.date>=today).length;
+  const attente = sorties.filter(s=>{const p=computeProgress(s); return p.done<p.total;}).length;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat-card"><div class="num">${total}</div><div class="lbl">Sorties enregistrées</div></div>
+    <div class="stat-card"><div class="num">${avenir}</div><div class="lbl">À venir</div></div>
+    <div class="stat-card warn"><div class="num">${attente}</div><div class="lbl">Avec actions en attente</div></div>
+  `;
+}
+
+let alertsCollapsed = false;
+
+function renderAlerts(){
+  const banner = document.getElementById('alertBanner');
+  const today = todayStr();
+
+  const pending = sorties
+    .map(s => ({s, p: computeProgress(s)}))
+    .filter(x => x.p.done < x.p.total)
+    .sort((a,b) => a.s.date.localeCompare(b.s.date));
+
+  if(pending.length === 0){
+    banner.classList.add('alert-none');
+    return;
+  }
+  banner.classList.remove('alert-none');
+
+  const late = pending.filter(x => x.s.date < today);
+  const rest = pending.filter(x => x.s.date >= today);
+
+  document.getElementById('alertBannerTitle').textContent =
+    late.length > 0
+      ? `${pending.length} sortie(s) avec des étapes en attente, dont ${late.length} déjà passée(s)`
+      : `${pending.length} sortie(s) avec des étapes en attente`;
+
+  document.getElementById('alertToggleBtn').textContent = alertsCollapsed ? 'Afficher' : 'Masquer';
+  const list = document.getElementById('alertList');
+  list.style.display = alertsCollapsed ? 'none' : 'flex';
+
+  const ordered = [...late, ...rest];
+  const shown = ordered.slice(0, 6);
+
+  list.innerHTML = shown.map(({s,p}) => {
+    const du = daysUntil(s.date);
+    let tag;
+    if(s.date < today) tag = `<span class="alert-tag late">En retard</span>`;
+    else if(du <= 3) tag = `<span class="alert-tag soon">${du===0?"Aujourd'hui":du===1?"Demain":"Dans "+du+" j"}</span>`;
+    else tag = `<span class="alert-tag upcoming">${formatDate(s.date)}</span>`;
+    return `<div class="alert-item" data-id="${s.id}">
+      <div class="ai-left">
+        <span class="ai-dest">${escapeHtml(s.destination || 'Sortie sans titre')}</span>
+        <span class="ai-classes">${s.classes.join(', ')}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <span style="font-size:11.5px;color:var(--ink-soft);">${p.done}/${p.total} étapes</span>
+        ${tag}
+      </div>
+    </div>`;
+  }).join('');
+
+  if(ordered.length > shown.length){
+    list.innerHTML += `<div class="alert-more">+ ${ordered.length - shown.length} autre(s) sortie(s) concernée(s)</div>`;
+  }
+
+  list.querySelectorAll('.alert-item').forEach(el=>{
+    el.addEventListener('click', ()=> openModal(el.dataset.id));
+  });
+}
+
+function formatDate(d){
+  if(!d) return '';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+function transportLabel(t){
+  return {aucun:"Sur place", pied:"À pied", bus_mairie:"Bus mairie", autre_bus:"Autre bus"}[t] || t;
+}
+function cantineTag(s){
+  if(!s.needsCantine){
+    return `<span class="meta-tag muted">🍽️ Cantine non concernée</span>`;
+  }
+  const done = s.steps.cantine && s.steps.cantine.done;
+  return done
+    ? `<span class="meta-tag ok">🍽️ Cantine annulée</span>`
+    : `<span class="meta-tag pending">🍽️ Cantine à annuler</span>`;
+}
+
+function daysUntil(dateStr){
+  const today = new Date(todayStr()+'T00:00:00');
+  const d = new Date(dateStr+'T00:00:00');
+  return Math.round((d-today)/86400000);
+}
+
+function cardHtml(s){
+  const p = computeProgress(s);
+  const pct = p.total ? Math.round((p.done/p.total)*100) : 100;
+  const color = tabColorFor(s.classes[0] || '');
+  const incomplete = p.done < p.total;
+  const late = incomplete && s.date < todayStr();
+  const stepsHtml = STEP_DEFS.filter(d=> !d.conditional || s[d.conditional]).map(d=>{
+    const st = s.steps[d.key] || {done:false};
+    return `<div class="step ${st.done?'done':'pending'}" id="step_${s.id}_${d.key}">
+      <div class="box">${st.done?'✓':''}</div>
+      <div class="lbl">${d.label}</div>
+    </div>`;
+  }).join('');
+
+  const badge = incomplete
+    ? `<div class="card-badge ${late?'late':''}">⚠ ${p.total-p.done} en attente</div>`
+    : '';
+
+  return `<div class="card ${late?'is-late':''}">
+    ${badge}
+    <div class="tab" style="background:${color};"></div>
+    <div class="card-head">
+      <p class="dest">${escapeHtml(s.destination || 'Sortie sans titre')}</p>
+      <div class="meta">
+        <span>📅 ${formatDate(s.date)}</span>
+        ${s.horaires ? `<span>🕐 ${escapeHtml(s.horaires)}</span>` : ''}
+        <span>🚌 ${transportLabel(s.transport)}</span>
+        ${cantineTag(s)}
+      </div>
+      <div class="classes">${s.classes.map(c=>`<span class="chip">${c}</span>`).join('')}</div>
+    </div>
+    <div class="progress-row">
+      <div class="progress-bar"><div class="fill" style="width:${pct}%;"></div></div>
+      <div class="progress-label">${p.done}/${p.total} étapes complétées</div>
+    </div>
+    <div class="steps">${stepsHtml}</div>
+    ${s.notes ? `<div class="card-notes">${escapeHtml(s.notes)}</div>` : ''}
+    <div class="card-foot">
+      <button class="btn btn-ghost btn-small" id="edit_${s.id}">Modifier</button>
+      <button class="btn btn-danger-ghost btn-small" id="del_${s.id}">Supprimer</button>
+    </div>
+  </div>`;
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function toggleStepQuick(id, key){
+  const s = sorties.find(x=>x.id===id);
+  if(!s) return;
+  if(!s.steps[key]) s.steps[key] = {done:false, date:''};
+  s.steps[key].done = !s.steps[key].done;
+  s.steps[key].date = s.steps[key].done ? todayStr() : '';
+  saveData();
+  render();
+}
+
+function deleteSortie(id){
+  if(!confirm('Supprimer cette sortie du carnet ?')) return;
+  sorties = sorties.filter(s=>s.id!==id);
+  saveData();
+  render();
+}
+
+/* ---- MODAL ---- */
+function buildClassPicker(){
+  const picker = document.getElementById('classPicker');
+  picker.innerHTML = CLASSES.map(c=>`<div class="class-opt" data-class="${c}">${c}</div>`).join('');
+  picker.querySelectorAll('.class-opt').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const c = el.dataset.class;
+      const idx = modalState.classes.indexOf(c);
+      if(idx>-1) modalState.classes.splice(idx,1); else modalState.classes.push(c);
+      el.classList.toggle('selected');
+    });
+  });
+}
+
+function setSwitch(elId, on){
+  const el = document.getElementById(elId);
+  el.classList.toggle('on', !!on);
+  el.dataset.on = on ? '1' : '0';
+}
+function wireSwitch(elId){
+  const el = document.getElementById(elId);
+  el.addEventListener('click', ()=>{
+    const on = el.dataset.on === '1';
+    setSwitch(elId, !on);
+    if(elId === 'fCantineToggle'){
+      modalState.needsCantine = !on;
+      document.getElementById('row_cantine').style.display = modalState.needsCantine ? 'flex' : 'none';
+    }
+    updateBusRowsVisibility();
+  });
+}
+
+function updateBusRowsVisibility(){
+  const t = document.getElementById('fTransport').value;
+  const needsBus = (t === 'bus_mairie' || t === 'autre_bus');
+  document.getElementById('row_busCommande').style.display = needsBus ? 'flex' : 'none';
+  document.getElementById('row_busValidation').style.display = needsBus ? 'flex' : 'none';
+}
+
+function openModal(id){
+  editingId = id || null;
+  const s = id ? sorties.find(x=>x.id===id) : null;
+
+  document.getElementById('modalTitle').textContent = s ? 'Modifier la sortie' : 'Nouvelle sortie';
+  document.getElementById('fDestination').value = s ? s.destination : '';
+  document.getElementById('fDate').value = s ? s.date : '';
+  document.getElementById('fHoraires').value = s ? s.horaires : '';
+  document.getElementById('fTransport').value = s ? s.transport : 'aucun';
+  document.getElementById('fNotes').value = s ? (s.notes||'') : '';
+
+  modalState.classes = s ? s.classes.slice() : [];
+  modalState.needsCantine = s ? !!s.needsCantine : false;
+
+  buildClassPicker();
+  document.querySelectorAll('.class-opt').forEach(el=>{
+    if(modalState.classes.includes(el.dataset.class)) el.classList.add('selected');
+  });
+
+  setSwitch('fCantineToggle', modalState.needsCantine);
+  document.getElementById('row_cantine').style.display = modalState.needsCantine ? 'flex' : 'none';
+
+  STEP_DEFS.forEach(d=>{
+    const st = s && s.steps[d.key] ? s.steps[d.key].done : false;
+    setSwitch('s_'+d.key, st);
+  });
+
+  updateBusRowsVisibility();
+
+  document.getElementById('overlay').style.display = 'flex';
+}
+
+function closeModal(){
+  document.getElementById('overlay').style.display = 'none';
+  editingId = null;
+}
+
+function saveModal(){
+  const destination = document.getElementById('fDestination').value.trim();
+  const date = document.getElementById('fDate').value;
+  if(!destination || !date){
+    alert('Merci de renseigner au minimum la destination et la date de la sortie.');
+    return;
+  }
+  const horaires = document.getElementById('fHoraires').value.trim();
+  const transport = document.getElementById('fTransport').value;
+  const notes = document.getElementById('fNotes').value.trim();
+  const needsBus = (transport === 'bus_mairie' || transport === 'autre_bus');
+
+  const steps = {};
+  STEP_DEFS.forEach(d=>{
+    const el = document.getElementById('s_'+d.key);
+    const done = el.dataset.on === '1';
+    const prev = editingId ? (sorties.find(x=>x.id===editingId)||{}).steps : null;
+    const prevDate = prev && prev[d.key] ? prev[d.key].date : '';
+    steps[d.key] = {done, date: done ? (prevDate || todayStr()) : ''};
+  });
+
+  const record = {
+    id: editingId || ('s_' + Date.now()),
+    destination, date, horaires, transport,
+    classes: modalState.classes.slice(),
+    needsCantine: modalState.needsCantine,
+    needsBus,
+    steps, notes
+  };
+
+  if(editingId){
+    const idx = sorties.findIndex(x=>x.id===editingId);
+    sorties[idx] = record;
+  }else{
+    sorties.push(record);
+  }
+  saveData();
+  closeModal();
+  render();
+}
+
+/* ---- INIT ---- */
+document.getElementById('btnAdd').addEventListener('click', ()=> openModal(null));
+document.getElementById('modalClose').addEventListener('click', closeModal);
+document.getElementById('btnCancel').addEventListener('click', closeModal);
+document.getElementById('btnSave').addEventListener('click', saveModal);
+document.getElementById('overlay').addEventListener('click', (e)=>{ if(e.target.id==='overlay') closeModal(); });
+document.getElementById('filterClasse').addEventListener('change', render);
+document.getElementById('filterStatut').addEventListener('change', render);
+document.getElementById('sortOrder').addEventListener('change', render);
+document.getElementById('fTransport').addEventListener('change', updateBusRowsVisibility);
+document.getElementById('alertToggleBtn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  alertsCollapsed = !alertsCollapsed;
+  renderAlerts();
+});
+
+wireSwitch('fCantineToggle');
+STEP_DEFS.forEach(d=> wireSwitch('s_'+d.key));
+
+document.getElementById('btnExport').addEventListener('click', exportData);
+document.getElementById('btnImport').addEventListener('click', ()=> document.getElementById('fileImport').click());
+document.getElementById('fileImport').addEventListener('change', (e)=>{
+  if(e.target.files[0]) importData(e.target.files[0]);
+  e.target.value = '';
+});
+
+populateFilterClasse();
+loadData();
+</script>
+</body>
+</html>

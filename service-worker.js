@@ -1,7 +1,6 @@
 const CACHE_NAME = 'cahier-appel-v1';
 const ASSETS = [
-  './',
-  './index.html',
+  './cahier-appel.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
