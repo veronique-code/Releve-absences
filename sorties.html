@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Carnet des sorties scolaires</title>
-<link rel="manifest" href="sorties-manifest.json">
+<link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#33564A">
@@ -860,7 +860,7 @@ loadData();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw-sorties.js', { scope: './sorties.html' }).catch(()=>{});
+    navigator.serviceWorker.register('service-worker.js', { scope: './' }).catch(()=>{});
   });
 }
 </script>

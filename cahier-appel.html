@@ -1182,7 +1182,7 @@ loadData();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('service-worker.js', { scope: './cahier-appel.html' }).catch(()=>{});
+    navigator.serviceWorker.register('service-worker.js', { scope: './' }).catch(()=>{});
   });
 }
 </script>

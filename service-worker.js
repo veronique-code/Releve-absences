@@ -1,6 +1,8 @@
-const CACHE_NAME = 'cahier-appel-v1';
+const CACHE_NAME = 'espace-direction-v2';
 const ASSETS = [
+  './index.html',
   './cahier-appel.html',
+  './sorties.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
@@ -8,7 +10,11 @@ const ASSETS = [
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then(cache =>
+      Promise.all(ASSETS.map(url =>
+        cache.add(url).catch(err => console.warn('Échec de mise en cache :', url, err))
+      ))
+    )
   );
   self.skipWaiting();
 });
