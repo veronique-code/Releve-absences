@@ -1,4 +1,4 @@
-const CACHE_NAME = 'espace-direction-v2';
+const CACHE_NAME = 'espace-direction-v4';
 const ASSETS = [
   './index.html',
   './cahier-appel.html',
@@ -30,6 +30,7 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+  if (!event.request.url.startsWith('http')) return;
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
