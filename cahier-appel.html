@@ -16,17 +16,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap');
 
 :root{
-  --paper:#F7F3E7;
-  --ink:#25344B;
-  --ink-soft:#5B6B85;
-  --margin-red:#B8493F;
-  --grid-blue:#B9CFE0;
-  --gold:#C0923B;
-  --absent:#C8574A;
-  --absent-bg:#F7E4E1;
-  --present-green:#3E6350;
+  --paper:#F6F3FB;
+  --ink:#453B62;
+  --ink-soft:#7A719A;
+  --margin-red:#E9958A;
+  --grid-blue:#D6E7F5;
+  --gold:#F3C97E;
+  --absent:#C2624B;
+  --absent-bg:#FDF0EA;
+  --present-green:#3E9080;
   --surface:#FFFFFF;
-  --border:#DCD4C0;
+  --border:#E7E0F2;
 }
 *{box-sizing:border-box;}
 body{
@@ -584,7 +584,6 @@ table.report td.num{ text-align:right; font-variant-numeric:tabular-nums; }
   <div class="sync-bar">
     <span class="sync-note" id="sync-status">Connexion à la synchronisation…</span>
     <div class="sync-actions">
-      <button class="ghost" id="change-code-btn">Changer de code</button>
       <button class="ghost" id="export-btn">⬇ Exporter</button>
       <button class="ghost" id="import-btn">⬆ Importer</button>
       <input type="file" id="import-file-input" accept="application/json" style="display:none">
@@ -658,7 +657,7 @@ function uid(){
 let docRef = null;
 let firstSnapshotReceived = false;
 
-function accessCodeKey(){ return 'espace-direction-access-code'; }
+const DOC_ID = '77459b9b941bcb4714d0c121313c900e';
 
 async function sha256Hex(str){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
@@ -670,12 +669,11 @@ function setSyncStatus(text, ok){
   if(el){ el.textContent = text; el.style.color = ok ? 'var(--present-green)' : 'var(--absent)'; }
 }
 
-async function initSync(code){
-  localStorage.setItem(accessCodeKey(), code);
+async function initSync(){
   setSyncStatus('Connexion en cours…', true);
   try{
     await signInAnonymously(auth);
-    const hash = (await sha256Hex(code)).slice(0,32);
+    const hash = DOC_ID;
     docRef = doc(db, 'cahier-appel', hash);
     onSnapshot(docRef, (snap)=>{
       if(snap.exists() && snap.data().payload){
@@ -715,31 +713,11 @@ function hideAccessGate(){
   document.getElementById('access-gate').style.display = 'none';
 }
 
-document.getElementById('access-code-submit').addEventListener('click', async ()=>{
-  const val = document.getElementById('access-code-input').value.trim();
-  if(!val) return;
-  hideAccessGate();
-  await initSync(val);
-});
-document.getElementById('access-code-input').addEventListener('keydown', e=>{
-  if(e.key==='Enter') document.getElementById('access-code-submit').click();
-});
-document.getElementById('change-code-btn').addEventListener('click', ()=>{
-  if(!confirm("Changer de code d'accès ? Vous devrez ressaisir le nouveau code (ou l'ancien) sur tous vos appareils.")) return;
-  localStorage.removeItem(accessCodeKey());
-  document.getElementById('access-code-input').value = '';
-  DATA = { classes: [], absences: {} };
-  docRef = null;
-  showAccessGate();
-});
+
+
 
 (function boot(){
-  const existingCode = localStorage.getItem(accessCodeKey());
-  if(existingCode){
-    initSync(existingCode);
-  }else{
-    showAccessGate();
-  }
+  initSync();
   render();
 })();
 
