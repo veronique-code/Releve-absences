@@ -1,4 +1,4 @@
-const CACHE_NAME = 'espace-direction-v4';
+const CACHE_NAME = 'espace-direction-v5';
 const ASSETS = [
   './index.html',
   './cahier-appel.html',
