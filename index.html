@@ -131,6 +131,7 @@ body{
 }
 .record.rec-appel .tab{ background:var(--ink); }
 .record.rec-sorties .tab{ background:var(--forest); }
+.record.rec-demandes .tab{ background:var(--terracotta); }
 
 .record .stripe{
   position:absolute;
@@ -140,6 +141,7 @@ body{
 }
 .record.rec-appel .stripe{ background:var(--terracotta); }
 .record.rec-sorties .stripe{ background:var(--gold); }
+.record.rec-demandes .stripe{ background:var(--ink); }
 
 .record h2{
   font-family:'Fraunces',serif;
@@ -163,6 +165,7 @@ body{
 }
 .record.rec-appel .go{ color:var(--ink); }
 .record.rec-sorties .go{ color:var(--forest); }
+.record.rec-demandes .go{ color:var(--terracotta); }
 .record .go .arrow{ transition:transform .15s ease; }
 .record:hover .go .arrow{ transform:translateX(3px); }
 
@@ -249,6 +252,19 @@ body{
           <span class="tag">2026–2027</span>
           <span class="tag">Alertes</span>
           <span class="tag">Export / import</span>
+        </div>
+      </a>
+
+      <a class="record rec-demandes" href="./demandes.html">
+        <span class="stripe"></span>
+        <span class="tab">Au fil des jours</span>
+        <h2>Demandes &amp; suivi</h2>
+        <p class="desc">Notez ce qu'il y a à faire, pour qui et pour quand&nbsp;: échéances, état d'avancement et remarques.</p>
+        <span class="go">Ouvrir le suivi <span class="arrow">→</span></span>
+        <div class="meta-row">
+          <span class="tag">Échéances</span>
+          <span class="tag">Synchronisé</span>
+          <span class="tag">Export CSV</span>
         </div>
       </a>
 

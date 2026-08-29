@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16232E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Demandes">
+<title>Demandes — École Jean Aicard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2316232E'/%3E%3Cpath d='M18 33l9 9 19-21' stroke='%232E9E96' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2316232E'/%3E%3Cpath d='M18 33l9 9 19-21' stroke='%232E9E96' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#16232E;
+  --ink-soft:#4A5A67;
+  --muted:#7C8A96;
+  --bg:#EDF1F3;
+  --surface:#FFFFFF;
+  --line:#D8E0E5;
+  --teal:#1E7A72;
+  --terracotta:#B4523A;
+  --gold:#A8781C;
+  --done:#7C8A96;
+  --radius:14px;
+  --display:"Fraunces",Georgia,serif;
+  --ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--ui);
+  font-size:16px;line-height:1.45;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+.wrap{max-width:620px;margin:0 auto;padding:0 14px 120px}
+
+/* ---------- en-tête ---------- */
+header{
+  position:sticky;top:0;z-index:20;background:var(--ink);color:#fff;
+  padding:calc(env(safe-area-inset-top) + 14px) 14px 12px;
+}
+.hd-inner{max-width:620px;margin:0 auto;display:flex;align-items:flex-start;gap:12px}
+.hd-title{flex:1;min-width:0}
+h1{
+  font-family:var(--display);font-weight:600;font-size:21px;margin:0;letter-spacing:.01em;
+}
+.hd-sub{font-size:12.5px;color:#9DB3BF;margin-top:2px;display:flex;align-items:center;gap:7px}
+.dot{width:7px;height:7px;border-radius:50%;background:#2E9E96;flex:none}
+.dot.off{background:#C9A227}
+.hd-btn{
+  background:rgba(255,255,255,.1);border:0;color:#fff;border-radius:10px;
+  width:38px;height:38px;font-size:17px;cursor:pointer;flex:none;
+}
+.hd-btn:active{background:rgba(255,255,255,.2)}
+
+/* ---------- bandeau info ---------- */
+.notice{
+  background:#FFF4D6;border:1px solid #E8D08A;color:#6B531A;
+  border-radius:12px;padding:11px 13px;font-size:13.5px;margin:12px 0 0
+}
+.notice code{background:rgba(0,0,0,.06);padding:1px 5px;border-radius:5px;font-size:12.5px}
+
+/* ---------- barre de filtres ---------- */
+.chips{display:flex;gap:7px;overflow-x:auto;padding:14px 0 4px;margin:0 -14px;padding-left:14px;padding-right:14px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{
+  flex:none;border:1px solid var(--line);background:var(--surface);
+  border-radius:999px;padding:7px 13px;font-size:13.5px;color:var(--ink-soft);
+  cursor:pointer;white-space:nowrap;
+}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip .n{opacity:.55;margin-left:5px;font-variant-numeric:tabular-nums}
+
+.tools{display:flex;gap:8px;margin-top:10px}
+.tools input,.tools select{
+  flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);
+  border-radius:10px;padding:9px 11px;font-size:14.5px;
+}
+.tools select{flex:0 1 45%}
+
+/* ---------- groupes ---------- */
+.group{margin-top:24px}
+.group-hd{
+  font-family:var(--display);font-size:11.5px;font-weight:600;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted);margin:0 0 8px 2px;
+  display:flex;align-items:baseline;gap:8px;
+}
+.group-hd .rule{flex:1;height:1px;background:var(--line)}
+.group.late .group-hd{color:var(--terracotta)}
+
+/* ---------- carte ---------- */
+.card{
+  display:flex;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--radius);margin-bottom:9px;overflow:hidden;cursor:pointer;
+  transition:transform .12s ease;
+}
+.card:active{transform:scale(.994)}
+.rail{
+  flex:none;width:58px;background:#F2F6F7;border-right:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:10px 4px;gap:1px;
+}
+.rail b{
+  font-family:var(--display);font-size:17px;font-weight:600;line-height:1;
+  font-variant-numeric:tabular-nums;color:var(--ink-soft);
+}
+.rail span{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.card.late .rail{background:#FBEDE9;border-right-color:#EBC9BF}
+.card.late .rail b{color:var(--terracotta)}
+.card.today .rail{background:#E6F2F0;border-right-color:#BFDEDA}
+.card.today .rail b{color:var(--teal)}
+.card.done{opacity:.6}
+.card.done .rail b{color:var(--done)}
+
+.body{flex:1;min-width:0;padding:11px 12px}
+.t{font-size:15.5px;font-weight:600;line-height:1.3;margin:0 0 3px;word-wrap:break-word}
+.card.done .t{text-decoration:line-through;text-decoration-color:var(--muted)}
+.meta{font-size:12.5px;color:var(--ink-soft);display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.meta .sep{color:var(--line)}
+.note{
+  font-size:12.5px;color:var(--muted);margin-top:6px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.pill{
+  display:inline-block;font-size:11px;font-weight:600;letter-spacing:.04em;
+  padding:2px 8px;border-radius:999px;border:1px solid;
+}
+.pill.a-faire{color:var(--terracotta);border-color:#E5C3B8;background:#FBEFEB}
+.pill.en-cours{color:var(--teal);border-color:#B9DAD6;background:#E9F4F2}
+.pill.en-attente{color:var(--gold);border-color:#E4D2A2;background:#FBF3DF}
+.pill.terminee{color:var(--done);border-color:var(--line);background:#F2F5F6}
+.urgent{color:var(--terracotta);font-weight:700;font-size:12px;letter-spacing:.05em}
+
+/* ---------- vide ---------- */
+.empty{
+  text-align:center;padding:56px 24px;color:var(--muted);
+}
+.empty p{margin:0 0 4px;font-family:var(--display);font-size:17px;color:var(--ink-soft)}
+.empty small{font-size:13.5px}
+
+/* ---------- bouton flottant ---------- */
+.fab{
+  position:fixed;right:max(16px,calc(50% - 296px));
+  bottom:calc(18px + env(safe-area-inset-bottom));
+  width:56px;height:56px;border-radius:18px;border:0;background:var(--ink);color:#fff;
+  font-size:28px;line-height:1;cursor:pointer;z-index:30;
+  box-shadow:0 6px 18px rgba(22,35,46,.28);
+}
+.fab:active{transform:scale(.95)}
+
+/* ---------- feuille modale ---------- */
+.scrim{
+  position:fixed;inset:0;background:rgba(22,35,46,.45);z-index:40;
+  display:none;align-items:flex-end;justify-content:center;
+}
+.scrim.open{display:flex}
+.sheet{
+  background:var(--bg);width:100%;max-width:620px;max-height:92vh;overflow-y:auto;
+  border-radius:20px 20px 0 0;padding:18px 16px calc(22px + env(safe-area-inset-bottom));
+  animation:rise .22s ease;
+}
+@keyframes rise{from{transform:translateY(22px);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}.card{transition:none}}
+.sheet h2{font-family:var(--display);font-size:19px;font-weight:600;margin:0 0 16px}
+label{display:block;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 5px 2px}
+.field{margin-bottom:14px}
+.field input,.field select,.field textarea{
+  width:100%;background:var(--surface);border:1px solid var(--line);
+  border-radius:11px;padding:11px 12px;font-size:16px;
+}
+.field textarea{min-height:78px;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus,
+.chip:focus-visible,button:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{
+  flex:1 1 auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  padding:9px 6px;font-size:13.5px;cursor:pointer;color:var(--ink-soft);
+}
+.seg button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.check{display:flex;align-items:center;gap:9px;font-size:14.5px;color:var(--ink-soft)}
+.check input{width:20px;height:20px;accent-color:var(--terracotta)}
+.actions{display:flex;gap:9px;margin-top:20px}
+.btn{
+  flex:1;border:0;border-radius:12px;padding:13px;font-size:15.5px;font-weight:600;cursor:pointer;
+}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink-soft);flex:0 0 auto;padding:13px 18px}
+.btn.danger{background:transparent;border:1px solid #E5C3B8;color:var(--terracotta);flex:0 0 auto;padding:13px 16px}
+.menu-item{
+  display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);
+  border-radius:12px;padding:14px;margin-bottom:9px;font-size:15.5px;cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-inner">
+    <div class="hd-title">
+      <h1>Demandes &amp; suivi</h1>
+      <div class="hd-sub"><span class="dot" id="dot"></span><span id="status">Connexion…</span></div>
+    </div>
+    <button class="hd-btn" id="menuBtn" aria-label="Menu">⋯</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="notice"></div>
+
+  <div class="chips" id="chips"></div>
+
+  <div class="tools">
+    <input type="search" id="search" placeholder="Rechercher…" aria-label="Rechercher une demande">
+    <select id="who" aria-label="Filtrer par destinataire"><option value="">Tous les destinataires</option></select>
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<button class="fab" id="addBtn" aria-label="Ajouter une demande">+</button>
+
+<!-- feuille : formulaire -->
+<div class="scrim" id="formScrim">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="formTitle">
+    <h2 id="formTitle">Nouvelle demande</h2>
+
+    <div class="field">
+      <label for="f-titre">Objet</label>
+      <input id="f-titre" placeholder="Ex. Commander les cahiers de CP">
+    </div>
+
+    <div class="field">
+      <label for="f-qui">Pour qui</label>
+      <select id="f-qui"></select>
+    </div>
+
+    <div class="field">
+      <label for="f-cat">Domaine</label>
+      <select id="f-cat"></select>
+    </div>
+
+    <div class="field">
+      <label for="f-date">Échéance</label>
+      <input type="date" id="f-date">
+    </div>
+
+    <div class="field">
+      <label>État</label>
+      <div class="seg" id="f-statut"></div>
+    </div>
+
+    <div class="field">
+      <label class="check" style="text-transform:none;letter-spacing:0;font-size:14.5px;color:var(--ink-soft)">
+        <input type="checkbox" id="f-urgent"> Signaler comme urgent
+      </label>
+    </div>
+
+    <div class="field">
+      <label for="f-notes">Remarques</label>
+      <textarea id="f-notes" placeholder="Précisions, suites données, personne relancée…"></textarea>
+    </div>
+
+    <div class="actions">
+      <button class="btn ghost" id="cancelBtn">Annuler</button>
+      <button class="btn primary" id="saveBtn">Enregistrer</button>
+    </div>
+    <div class="actions" id="deleteRow" style="display:none">
+      <button class="btn danger" id="deleteBtn" style="flex:1">Supprimer cette demande</button>
+    </div>
+  </div>
+</div>
+
+<!-- feuille : menu -->
+<div class="scrim" id="menuScrim">
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="Menu">
+    <h2>Menu</h2>
+    <button class="menu-item" id="exportBtn">Exporter en CSV (tableur)</button>
+    <button class="menu-item" id="purgeBtn">Archiver les demandes terminées</button>
+    <div class="actions"><button class="btn ghost" id="menuClose" style="flex:1">Fermer</button></div>
+  </div>
+</div>
+
+<script type="module">
+/* =========================================================================
+   1. CONFIGURATION FIREBASE
+   -------------------------------------------------------------------------
+   Remplacez la valeur de apiKey ci-dessous par celle de votre projet.
+   Vous la trouvez :
+     - soit dans le code d'une de vos pages existantes (Sorties scolaires /
+       Cahier d'appel), dans le bloc firebaseConfig ;
+     - soit sur console.firebase.google.com > Paramètres du projet >
+       Vos applications > Configuration du SDK.
+   Tant que la clé n'est pas renseignée, l'application fonctionne en mode
+   local : les données restent sur l'appareil, sans synchronisation.
+   ========================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDovrxndeWXBs-ZA_-QQYw6983D5bQ6kgo",
+  authDomain: "sorties-scolaires.firebaseapp.com",
+  projectId: "sorties-scolaires",
+  storageBucket: "sorties-scolaires.firebasestorage.app",
+  messagingSenderId: "690408502155",
+  appId: "1:690408502155:web:d0d5cfc618e64d5028f58e"
+};
+const COLLECTION = "demandes";
+
+/* =========================================================================
+   2. LISTES DE RÉFÉRENCE — à ajuster librement
+   ========================================================================= */
+const DESTINATAIRES = [
+  ["Enseignants", [
+    "Naïma LATRACH — CP A",
+    "Aurélie SEYFRIED — CP B",
+    "Marie OSTROWSKI — CP C",
+    "Sandrine MONJARDIN — CE1 A",
+    "Laetitia BASOLO — CE1 B",
+    "Béatrice COMBA — CE1/CE2",
+    "Nathalie GRATTAROLA — CE2 A",
+    "Laura MAROLLEAU — CE2 B",
+    "Jessica GONZALEZ — CM1 A",
+    "Julia JOURDAIN — CM1 B",
+    "Marion ODASSO — CM1/CM2",
+    "Sabrina BORGETTO — CM2 A",
+    "Zélie BLAISON — CM2 B",
+    "Benoît DARDAINE — ULIS",
+    "Toute l'équipe enseignante"
+  ]],
+  ["Équipe éducative", [
+    "Marie CATHONNET — RASED E",
+    "Aurélien DACHEUX — RASED G",
+    "Ghislaine DUVAL — AESH",
+    "Remplaçant / ZIL"
+  ]],
+  ["Institutions", [
+    "Circonscription / IEN La Garde",
+    "DSDEN 83 / Académie de Nice",
+    "Mairie de La Garde",
+    "Périscolaire / Cantine",
+    "Coopérative scolaire / OCCE"
+  ]],
+  ["Autres", [
+    "Familles",
+    "Représentants de parents",
+    "Partenaire extérieur",
+    "Moi-même"
+  ]]
+];
+
+const CATEGORIES = [
+  "Administratif","Pédagogique","Sécurité / PPMS","Matériel / Travaux",
+  "Coopérative","Sorties scolaires","Communication","Vie de l'élève","Autre"
+];
+
+const STATUTS = ["À faire","En cours","En attente","Terminée"];
+const slug = s => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z]+/g,"-");
+
+/* =========================================================================
+   3. STOCKAGE : Firestore si la clé est présente, sinon local
+   ========================================================================= */
+const LOCAL_ONLY = firebaseConfig.apiKey.startsWith("COLLEZ") || firebaseConfig.apiKey.startsWith("VOTRE");
+let store, taches = [];
+
+const localStore = {
+  key:"jeanaicard_demandes",
+  read(){ try{ return JSON.parse(localStorage.getItem(this.key)||"[]"); }catch{ return []; } },
+  write(a){ localStorage.setItem(this.key, JSON.stringify(a)); render(); },
+  start(){ taches = this.read(); render(); },
+  add(d){ const a=this.read(); a.push({...d,id:"l"+Date.now()+Math.random().toString(36).slice(2,6)}); taches=a; this.write(a); },
+  update(id,d){ const a=this.read().map(t=>t.id===id?{...t,...d}:t); taches=a; this.write(a); },
+  remove(id){ const a=this.read().filter(t=>t.id!==id); taches=a; this.write(a); }
+};
+
+async function initFirebase(){
+  const [{initializeApp},{getAuth,signInAnonymously,onAuthStateChanged},fs] = await Promise.all([
+    import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"),
+    import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"),
+    import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js")
+  ]);
+  const app = initializeApp(firebaseConfig);
+  const db  = fs.getFirestore(app);
+  const col = fs.collection(db, COLLECTION);
+  await signInAnonymously(getAuth(app));
+
+  store = {
+    start(){
+      fs.onSnapshot(col, snap => {
+        taches = snap.docs.map(d => ({id:d.id, ...d.data()}));
+        setStatus(true, "Synchronisé");
+        render();
+      }, err => { console.error(err); setStatus(false,"Synchro interrompue"); });
+    },
+    add(d){ return fs.addDoc(col, d); },
+    update(id,d){ return fs.updateDoc(fs.doc(db,COLLECTION,id), d); },
+    remove(id){ return fs.deleteDoc(fs.doc(db,COLLECTION,id)); }
+  };
+  store.start();
+}
+
+function setStatus(ok, txt){
+  document.getElementById("status").textContent = txt;
+  document.getElementById("dot").className = "dot" + (ok ? "" : " off");
+}
+
+/* =========================================================================
+   4. DATES
+   ========================================================================= */
+const today = () => { const d=new Date(); d.setHours(0,0,0,0); return d; };
+function daysLeft(iso){
+  if(!iso) return null;
+  const d = new Date(iso+"T00:00:00");
+  return Math.round((d - today())/86400000);
+}
+function railText(n){
+  if(n === null) return ["—","sans date"];
+  if(n === 0)    return ["Auj.",""];
+  if(n < 0)      return ["+"+Math.abs(n), Math.abs(n)>1?"jours":"jour"];
+  return ["J−"+n, ""];
+}
+function bucketOf(t){
+  if(t.statut === "Terminée") return 5;
+  const n = daysLeft(t.echeance);
+  if(n === null) return 4;
+  if(n < 0)  return 0;
+  if(n === 0) return 1;
+  if(n <= 7) return 2;
+  return 3;
+}
+const BUCKETS = ["En retard","Aujourd'hui","Dans les 7 jours","Plus tard","Sans échéance","Terminées"];
+
+/* =========================================================================
+   5. RENDU
+   ========================================================================= */
+const esc = s => (s||"").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let filtre = "a-traiter", recherche = "", filtreQui = "";
+
+const FILTRES = [["a-traiter","À traiter"],["À faire","À faire"],["En cours","En cours"],["En attente","En attente"],["Terminée","Terminées"]];
+
+function visibles(){
+  return taches.filter(t => {
+    if(filtre === "a-traiter" ? t.statut === "Terminée" : t.statut !== filtre) return false;
+    if(filtreQui && t.destinataire !== filtreQui) return false;
+    if(recherche){
+      const h = (t.titre+" "+(t.destinataire||"")+" "+(t.remarques||"")+" "+(t.categorie||"")).toLowerCase();
+      if(!h.includes(recherche.toLowerCase())) return false;
+    }
+    return true;
+  });
+}
+
+function renderChips(){
+  const box = document.getElementById("chips");
+  box.innerHTML = FILTRES.map(([v,l]) => {
+    const n = taches.filter(t => v === "a-traiter" ? t.statut !== "Terminée" : t.statut === v).length;
+    return `<button class="chip" data-f="${v}" aria-pressed="${filtre===v}">${l}<span class="n">${n}</span></button>`;
+  }).join("");
+  box.querySelectorAll(".chip").forEach(b => b.onclick = () => { filtre = b.dataset.f; render(); });
+}
+
+function render(){
+  renderChips();
+  const items = visibles();
+  const list = document.getElementById("list");
+
+  if(!items.length){
+    list.innerHTML = `<div class="empty"><p>Rien à afficher ici</p>
+      <small>${taches.length ? "Essayez un autre filtre." : "Appuyez sur + pour noter votre première demande."}</small></div>`;
+    return;
+  }
+
+  const groupes = {};
+  items.forEach(t => { const b = bucketOf(t); (groupes[b] ||= []).push(t); });
+
+  list.innerHTML = Object.keys(groupes).sort((a,b)=>a-b).map(k => {
+    const arr = groupes[k].sort((a,b)=>{
+      if(a.urgent !== b.urgent) return a.urgent ? -1 : 1;
+      return (a.echeance||"9999").localeCompare(b.echeance||"9999");
+    });
+    return `<section class="group ${k==="0"?"late":""}">
+      <h2 class="group-hd">${BUCKETS[k]}<span class="rule"></span>${arr.length}</h2>
+      ${arr.map(carte).join("")}
+    </section>`;
+  }).join("");
+
+  list.querySelectorAll(".card").forEach(c => c.onclick = () => ouvrirForm(c.dataset.id));
+}
+
+function carte(t){
+  const n = daysLeft(t.echeance);
+  const [big,small] = railText(n);
+  const cls = t.statut === "Terminée" ? "done" : n === null ? "" : n < 0 ? "late" : n === 0 ? "today" : "";
+  return `<article class="card ${cls}" data-id="${t.id}">
+    <div class="rail"><b>${big}</b>${small?`<span>${small}</span>`:""}</div>
+    <div class="body">
+      <p class="t">${esc(t.titre)}</p>
+      <div class="meta">
+        <span class="pill ${slug(t.statut)}">${t.statut}</span>
+        ${t.urgent && t.statut!=="Terminée" ? `<span class="urgent">URGENT</span>` : ""}
+        ${t.destinataire ? `<span class="sep">·</span><span>${esc(t.destinataire)}</span>` : ""}
+        ${t.categorie ? `<span class="sep">·</span><span>${esc(t.categorie)}</span>` : ""}
+      </div>
+      ${t.remarques ? `<p class="note">${esc(t.remarques)}</p>` : ""}
+    </div>
+  </article>`;
+}
+
+/* =========================================================================
+   6. FORMULAIRE
+   ========================================================================= */
+let editId = null, statutChoisi = "À faire";
+
+function remplirListes(){
+  const opts = DESTINATAIRES.map(([g,l]) =>
+    `<optgroup label="${g}">${l.map(x=>`<option>${x}</option>`).join("")}</optgroup>`).join("");
+  document.getElementById("f-qui").innerHTML = `<option value="">— non précisé —</option>` + opts;
+  document.getElementById("who").innerHTML = `<option value="">Tous les destinataires</option>` + opts;
+  document.getElementById("f-cat").innerHTML = `<option value="">— non précisé —</option>` +
+    CATEGORIES.map(c=>`<option>${c}</option>`).join("");
+  document.getElementById("f-statut").innerHTML =
+    STATUTS.map(s=>`<button type="button" data-s="${s}">${s}</button>`).join("");
+  document.querySelectorAll("#f-statut button").forEach(b => b.onclick = () => {
+    statutChoisi = b.dataset.s; majStatut();
+  });
+}
+function majStatut(){
+  document.querySelectorAll("#f-statut button")
+    .forEach(b => b.setAttribute("aria-pressed", b.dataset.s === statutChoisi));
+}
+
+function ouvrirForm(id){
+  editId = id || null;
+  const t = id ? taches.find(x=>x.id===id) : null;
+  document.getElementById("formTitle").textContent = t ? "Modifier la demande" : "Nouvelle demande";
+  document.getElementById("f-titre").value = t?.titre || "";
+  document.getElementById("f-qui").value = t?.destinataire || "";
+  document.getElementById("f-cat").value = t?.categorie || "";
+  document.getElementById("f-date").value = t?.echeance || "";
+  document.getElementById("f-notes").value = t?.remarques || "";
+  document.getElementById("f-urgent").checked = !!t?.urgent;
+  statutChoisi = t?.statut || "À faire";
+  majStatut();
+  document.getElementById("deleteRow").style.display = t ? "flex" : "none";
+  document.getElementById("formScrim").classList.add("open");
+  if(!t) setTimeout(()=>document.getElementById("f-titre").focus(), 60);
+}
+const fermerForm = () => document.getElementById("formScrim").classList.remove("open");
+
+document.getElementById("saveBtn").onclick = async () => {
+  const titre = document.getElementById("f-titre").value.trim();
+  if(!titre){ document.getElementById("f-titre").focus(); return; }
+  const data = {
+    titre,
+    destinataire: document.getElementById("f-qui").value,
+    categorie:    document.getElementById("f-cat").value,
+    echeance:     document.getElementById("f-date").value,
+    remarques:    document.getElementById("f-notes").value.trim(),
+    urgent:       document.getElementById("f-urgent").checked,
+    statut:       statutChoisi,
+    maj:          new Date().toISOString()
+  };
+  if(editId) await store.update(editId, data);
+  else       await store.add({...data, creation:new Date().toISOString()});
+  fermerForm();
+};
+document.getElementById("deleteBtn").onclick = async () => {
+  if(editId && confirm("Supprimer définitivement cette demande ?")){ await store.remove(editId); fermerForm(); }
+};
+document.getElementById("cancelBtn").onclick = fermerForm;
+document.getElementById("addBtn").onclick = () => ouvrirForm(null);
+document.getElementById("formScrim").onclick = e => { if(e.target.id === "formScrim") fermerForm(); };
+
+/* =========================================================================
+   7. MENU
+   ========================================================================= */
+const menuScrim = document.getElementById("menuScrim");
+document.getElementById("menuBtn").onclick = () => menuScrim.classList.add("open");
+document.getElementById("menuClose").onclick = () => menuScrim.classList.remove("open");
+menuScrim.onclick = e => { if(e.target.id === "menuScrim") menuScrim.classList.remove("open"); };
+
+document.getElementById("exportBtn").onclick = () => {
+  const cols = ["titre","destinataire","categorie","echeance","statut","urgent","remarques"];
+  const head = ["Objet","Pour qui","Domaine","Échéance","État","Urgent","Remarques"];
+  const csv = "\uFEFF" + [head.join(";")].concat(
+    taches.map(t => cols.map(c => `"${String(t[c] ?? "").replace(/"/g,'""')}"`).join(";"))
+  ).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8"}));
+  a.download = `Demandes_Jean_Aicard_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  menuScrim.classList.remove("open");
+};
+
+document.getElementById("purgeBtn").onclick = async () => {
+  const finies = taches.filter(t => t.statut === "Terminée");
+  if(!finies.length){ alert("Aucune demande terminée à archiver."); return; }
+  if(!confirm(`Supprimer ${finies.length} demande(s) terminée(s) ? Pensez à exporter le CSV avant si vous souhaitez en garder une trace.`)) return;
+  for(const t of finies) await store.remove(t.id);
+  menuScrim.classList.remove("open");
+};
+
+document.getElementById("search").oninput = e => { recherche = e.target.value; render(); };
+document.getElementById("who").onchange  = e => { filtreQui = e.target.value; render(); };
+document.addEventListener("keydown", e => {
+  if(e.key === "Escape"){ fermerForm(); menuScrim.classList.remove("open"); }
+});
+
+/* =========================================================================
+   8. MANIFESTE (écran d'accueil) + DÉMARRAGE
+   ========================================================================= */
+const icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%2316232E'/%3E%3Cpath d='M144 264l72 72 152-168' stroke='%232E9E96' stroke-width='56' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E";
+const manifest = {name:"Demandes — École Jean Aicard", short_name:"Demandes", display:"standalone",
+  background_color:"#EDF1F3", theme_color:"#16232E", start_url:".",
+  icons:[{src:icon, sizes:"512x512", type:"image/svg+xml", purpose:"any"}]};
+const ml = document.createElement("link");
+ml.rel = "manifest";
+ml.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)],{type:"application/manifest+json"}));
+document.head.appendChild(ml);
+
+remplirListes();
+
+if(LOCAL_ONLY){
+  document.getElementById("notice").innerHTML =
+    `<div class="notice"><b>Mode local.</b> Les demandes sont enregistrées sur cet appareil uniquement.
+     Pour synchroniser téléphone et ordinateur, renseignez <code>apiKey</code> en haut du fichier
+     <code>index.html</code>.</div>`;
+  setStatus(false, "Données locales");
+  store = localStore;
+  store.start();
+}else{
+  setStatus(true, "Connexion…");
+  store = null;
+  initFirebase().catch(err => {
+    console.error(err);
+    document.getElementById("notice").innerHTML =
+      `<div class="notice"><b>Synchronisation indisponible.</b> L'application bascule sur les données de cet appareil.
+       Vérifiez la clé <code>apiKey</code> et les règles Firestore de la collection <code>${COLLECTION}</code>.</div>`;
+    setStatus(false, "Données locales");
+    store = localStore;
+    store.start();
+  });
+}
+</script>
+</body>
+</html>
