@@ -1,4 +1,4 @@
-const CACHE_NAME = 'espace-direction-v5';
+const CACHE_NAME = 'espace-direction-v8';
 const ASSETS = [
   './index.html',
   './cahier-appel.html',
@@ -30,16 +30,41 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET') return;
-  if (!event.request.url.startsWith('http')) return;
+  const req = event.request;
+
+  // On ignore ce qui n'est pas une simple lecture de page ou de fichier du site.
+  if (req.method !== 'GET') return;
+  if (!req.url.startsWith('http')) return;
+  if (new URL(req.url).origin !== self.location.origin) return;
+
+  const estUnePage = req.mode === 'navigate' || req.destination === 'document' ||
+                     req.url.endsWith('.html') || req.url.endsWith('/');
+
+  if (estUnePage) {
+    // Pages : on va chercher la version en ligne d'abord, le cache ne sert
+    // que si le réseau est indisponible. La dernière version est donc
+    // toujours affichée, sans rechargement forcé.
+    event.respondWith(
+      fetch(req)
+        .then(res => {
+          const copie = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put(req, copie));
+          return res;
+        })
+        .catch(() => caches.match(req).then(c => c || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // Autres fichiers (icônes, manifeste) : cache d'abord, mise à jour discrète.
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request).then(response => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
-        return response;
+    caches.match(req).then(cached => {
+      const reseau = fetch(req).then(res => {
+        const copie = res.clone();
+        caches.open(CACHE_NAME).then(c => c.put(req, copie));
+        return res;
       }).catch(() => cached);
+      return cached || reseau;
     })
   );
 });
