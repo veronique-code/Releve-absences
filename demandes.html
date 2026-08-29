@@ -196,6 +196,24 @@ label{display:block;font-size:12px;letter-spacing:.09em;text-transform:uppercase
   display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);
   border-radius:12px;padding:14px;margin-bottom:9px;font-size:15.5px;cursor:pointer;
 }
+
+.retour-hub{
+  display:inline-flex;align-items:center;gap:.45rem;
+  padding:7px 14px 7px 11px;
+  background:#FFFFFF;border:1px solid #E7E0F2;border-radius:999px;
+  color:#7A719A;text-decoration:none;
+  font-size:13px;font-weight:600;line-height:1;
+  transition:color .15s ease,border-color .15s ease;
+}
+.retour-hub:hover{color:#453B62;border-color:#B7A6E0;}
+.retour-hub:focus-visible{outline:2px solid #8A6BB8;outline-offset:2px;}
+.retour-hub .fl{display:inline-block;transition:transform .15s ease;}
+.retour-hub:hover .fl{transform:translateX(-3px);}
+.hub-bar{padding:14px 2rem 0;}
+@media (max-width:640px){
+  .hub-bar{padding:12px 1.1rem 0;}
+  .retour-hub{font-size:15px;padding:9px 16px 9px 13px;}
+}
 </style>
 </head>
 <body>
@@ -211,6 +229,7 @@ label{display:block;font-size:12px;letter-spacing:.09em;text-transform:uppercase
 </header>
 
 <div class="wrap">
+  <div class="hub-bar" style="padding-left:0;padding-right:0;"><a class="retour-hub" href="./index.html"><span class="fl">←</span> Espace direction</a></div>
   <div id="notice"></div>
 
   <div class="chips" id="chips"></div>
