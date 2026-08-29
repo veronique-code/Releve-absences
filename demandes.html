@@ -3,28 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#16232E">
+<meta name="theme-color" content="#E2D9F6">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Demandes">
 <title>Demandes — École Jean Aicard</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2316232E'/%3E%3Cpath d='M18 33l9 9 19-21' stroke='%232E9E96' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2316232E'/%3E%3Cpath d='M18 33l9 9 19-21' stroke='%232E9E96' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23A896DC'/%3E%3Cpath d='M18 33l9 9 19-21' stroke='%23FFFFFF' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23A896DC'/%3E%3Cpath d='M18 33l9 9 19-21' stroke='%23FFFFFF' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ink:#16232E;
-  --ink-soft:#4A5A67;
-  --muted:#7C8A96;
-  --bg:#EDF1F3;
+  --ink:#453B62;
+  --ink-soft:#7A719A;
+  --muted:#9A93B0;
+  --bg:#F6F3FB;
   --surface:#FFFFFF;
-  --line:#D8E0E5;
-  --teal:#1E7A72;
-  --terracotta:#B4523A;
-  --gold:#A8781C;
-  --done:#7C8A96;
+  --line:#E7E0F2;
+  --teal:#3E9080;
+  --terracotta:#C2624B;
+  --gold:#A97F2E;
+  --done:#9A93B0;
   --radius:14px;
   --display:"Fraunces",Georgia,serif;
   --ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
@@ -41,7 +41,8 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 
 /* ---------- en-tête ---------- */
 header{
-  position:sticky;top:0;z-index:20;background:var(--ink);color:#fff;
+  position:sticky;top:0;z-index:20;color:var(--ink);
+  background:linear-gradient(135deg,#CFE7F7 0%,#E2D9F6 52%,#FBDCD0 100%);
   padding:calc(env(safe-area-inset-top) + 14px) 14px 12px;
 }
 .hd-inner{max-width:620px;margin:0 auto;display:flex;align-items:flex-start;gap:12px}
@@ -49,18 +50,18 @@ header{
 h1{
   font-family:var(--display);font-weight:600;font-size:21px;margin:0;letter-spacing:.01em;
 }
-.hd-sub{font-size:12.5px;color:#9DB3BF;margin-top:2px;display:flex;align-items:center;gap:7px}
-.dot{width:7px;height:7px;border-radius:50%;background:#2E9E96;flex:none}
-.dot.off{background:#C9A227}
+.hd-sub{font-size:12.5px;color:var(--ink-soft);margin-top:2px;display:flex;align-items:center;gap:7px}
+.dot{width:7px;height:7px;border-radius:50%;background:#5BB89F;flex:none}
+.dot.off{background:#E0A93F}
 .hd-btn{
-  background:rgba(255,255,255,.1);border:0;color:#fff;border-radius:10px;
+  background:rgba(69,59,98,.09);border:0;color:var(--ink);border-radius:10px;
   width:38px;height:38px;font-size:17px;cursor:pointer;flex:none;
 }
-.hd-btn:active{background:rgba(255,255,255,.2)}
+.hd-btn:active{background:rgba(69,59,98,.18)}
 
 /* ---------- bandeau info ---------- */
 .notice{
-  background:#FFF4D6;border:1px solid #E8D08A;color:#6B531A;
+  background:#FDF3E2;border:1px solid #EFD9A6;color:#8A6A22;
   border-radius:12px;padding:11px 13px;font-size:13.5px;margin:12px 0 0
 }
 .notice code{background:rgba(0,0,0,.06);padding:1px 5px;border-radius:5px;font-size:12.5px}
@@ -101,7 +102,7 @@ h1{
 }
 .card:active{transform:scale(.994)}
 .rail{
-  flex:none;width:58px;background:#F2F6F7;border-right:1px solid var(--line);
+  flex:none;width:58px;background:#F3EFFA;border-right:1px solid var(--line);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:10px 4px;gap:1px;
 }
@@ -110,9 +111,9 @@ h1{
   font-variant-numeric:tabular-nums;color:var(--ink-soft);
 }
 .rail span{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.card.late .rail{background:#FBEDE9;border-right-color:#EBC9BF}
+.card.late .rail{background:#FDECE4;border-right-color:#F5CDBC}
 .card.late .rail b{color:var(--terracotta)}
-.card.today .rail{background:#E6F2F0;border-right-color:#BFDEDA}
+.card.today .rail{background:#E3F5EE;border-right-color:#BEE5D6}
 .card.today .rail b{color:var(--teal)}
 .card.done{opacity:.6}
 .card.done .rail b{color:var(--done)}
@@ -130,10 +131,10 @@ h1{
   display:inline-block;font-size:11px;font-weight:600;letter-spacing:.04em;
   padding:2px 8px;border-radius:999px;border:1px solid;
 }
-.pill.a-faire{color:var(--terracotta);border-color:#E5C3B8;background:#FBEFEB}
-.pill.en-cours{color:var(--teal);border-color:#B9DAD6;background:#E9F4F2}
-.pill.en-attente{color:var(--gold);border-color:#E4D2A2;background:#FBF3DF}
-.pill.terminee{color:var(--done);border-color:var(--line);background:#F2F5F6}
+.pill.a-faire{color:var(--terracotta);border-color:#F3CDBF;background:#FDF0EA}
+.pill.en-cours{color:var(--teal);border-color:#BEE5D9;background:#E9F7F1}
+.pill.en-attente{color:var(--gold);border-color:#EFD9A6;background:#FDF4E2}
+.pill.terminee{color:var(--done);border-color:var(--line);background:#F3EFFA}
 .urgent{color:var(--terracotta);font-weight:700;font-size:12px;letter-spacing:.05em}
 
 /* ---------- vide ---------- */
@@ -149,13 +150,13 @@ h1{
   bottom:calc(18px + env(safe-area-inset-bottom));
   width:56px;height:56px;border-radius:18px;border:0;background:var(--ink);color:#fff;
   font-size:28px;line-height:1;cursor:pointer;z-index:30;
-  box-shadow:0 6px 18px rgba(22,35,46,.28);
+  box-shadow:0 6px 18px rgba(69,59,98,.26);
 }
 .fab:active{transform:scale(.95)}
 
 /* ---------- feuille modale ---------- */
 .scrim{
-  position:fixed;inset:0;background:rgba(22,35,46,.45);z-index:40;
+  position:fixed;inset:0;background:rgba(69,59,98,.4);z-index:40;
   display:none;align-items:flex-end;justify-content:center;
 }
 .scrim.open{display:flex}
@@ -190,7 +191,7 @@ label{display:block;font-size:12px;letter-spacing:.09em;text-transform:uppercase
 }
 .btn.primary{background:var(--ink);color:#fff}
 .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink-soft);flex:0 0 auto;padding:13px 18px}
-.btn.danger{background:transparent;border:1px solid #E5C3B8;color:var(--terracotta);flex:0 0 auto;padding:13px 16px}
+.btn.danger{background:transparent;border:1px solid #F3CDBF;color:var(--terracotta);flex:0 0 auto;padding:13px 16px}
 .menu-item{
   display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);
   border-radius:12px;padding:14px;margin-bottom:9px;font-size:15.5px;cursor:pointer;
@@ -610,9 +611,9 @@ document.addEventListener("keydown", e => {
 /* =========================================================================
    8. MANIFESTE (écran d'accueil) + DÉMARRAGE
    ========================================================================= */
-const icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%2316232E'/%3E%3Cpath d='M144 264l72 72 152-168' stroke='%232E9E96' stroke-width='56' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E";
+const icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23A896DC'/%3E%3Cpath d='M144 264l72 72 152-168' stroke='%23FFFFFF' stroke-width='56' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E";
 const manifest = {name:"Demandes — École Jean Aicard", short_name:"Demandes", display:"standalone",
-  background_color:"#EDF1F3", theme_color:"#16232E", start_url:".",
+  background_color:"#F6F3FB", theme_color:"#E2D9F6", start_url:".",
   icons:[{src:icon, sizes:"512x512", type:"image/svg+xml", purpose:"any"}]};
 const ml = document.createElement("link");
 ml.rel = "manifest";

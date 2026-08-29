@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<meta name="theme-color" content="#25344B">
+<meta name="theme-color" content="#E2D9F6">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -16,14 +16,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap');
 
 :root{
-  --paper:#F7F3E7;
-  --ink:#25344B;
-  --ink-soft:#5B6B85;
-  --terracotta:#B8493F;
-  --gold:#C0923B;
-  --forest:#33564A;
-  --border:#DCD4C0;
+  --paper:#F6F3FB;
+  --ink:#453B62;
+  --ink-soft:#7A719A;
+  --terracotta:#F2A08E;
+  --gold:#F3C97E;
+  --forest:#86CBB4;
+  --border:#E7E0F2;
   --surface:#FFFFFF;
+  --lilas:#B7A6E0;
+  --ciel:#8FBDE8;
+  --prune:#8A6BB8;
+  --corail-fonce:#C2624B;
+  --menthe-fonce:#3E9080;
 }
 *{box-sizing:border-box;}
 body{
@@ -41,8 +46,8 @@ body{
 }
 
 .masthead{
-  background:var(--ink);
-  color:var(--paper);
+  background:linear-gradient(135deg,#CFE7F7 0%,#E2D9F6 52%,#FBDCD0 100%);
+  color:var(--ink);
   padding:2.4rem 2rem 2rem;
   position:relative;
   overflow:hidden;
@@ -52,15 +57,15 @@ body{
   position:absolute;
   left:38px;top:0;bottom:0;
   width:1px;
-  background:var(--terracotta);
-  opacity:.55;
+  background:#E9958A;
+  opacity:.85;
 }
 .masthead .eyebrow{
   margin:0 0 .4rem 56px;
   font-size:.75rem;
   letter-spacing:.14em;
   text-transform:uppercase;
-  color:var(--gold);
+  color:var(--prune);
   font-weight:600;
 }
 .masthead h1{
@@ -73,8 +78,8 @@ body{
 .masthead p{
   margin:0 0 0 56px;
   font-size:.9rem;
-  color:#C9D3C7;
-  opacity:.9;
+  color:var(--ink-soft);
+  opacity:1;
   max-width:38ch;
 }
 
@@ -105,15 +110,15 @@ body{
   border:1px solid var(--border);
   border-radius:4px 12px 12px 12px;
   padding:2.2rem 1.6rem 1.6rem;
-  box-shadow:0 1px 2px rgba(37,52,75,.05);
+  box-shadow:0 1px 3px rgba(69,59,98,.06);
   transition:transform .16s ease, box-shadow .16s ease;
 }
 .record:hover{
   transform:translateY(-3px);
-  box-shadow:0 10px 24px rgba(37,52,75,.12);
+  box-shadow:0 10px 26px rgba(69,59,98,.14);
 }
 .record:focus-visible{
-  outline:2px solid var(--gold);
+  outline:2px solid var(--prune);
   outline-offset:3px;
 }
 
@@ -125,11 +130,11 @@ body{
   font-weight:600;
   font-size:.72rem;
   letter-spacing:.03em;
-  color:#fff;
+  color:var(--ink);
   padding:.3rem .7rem .35rem;
   border-radius:4px 4px 0 0;
 }
-.record.rec-appel .tab{ background:var(--ink); }
+.record.rec-appel .tab{ background:var(--ciel); }
 .record.rec-sorties .tab{ background:var(--forest); }
 .record.rec-demandes .tab{ background:var(--terracotta); }
 
@@ -141,7 +146,7 @@ body{
 }
 .record.rec-appel .stripe{ background:var(--terracotta); }
 .record.rec-sorties .stripe{ background:var(--gold); }
-.record.rec-demandes .stripe{ background:var(--ink); }
+.record.rec-demandes .stripe{ background:var(--lilas); }
 
 .record h2{
   font-family:'Fraunces',serif;
@@ -164,8 +169,8 @@ body{
   font-weight:600;
 }
 .record.rec-appel .go{ color:var(--ink); }
-.record.rec-sorties .go{ color:var(--forest); }
-.record.rec-demandes .go{ color:var(--terracotta); }
+.record.rec-sorties .go{ color:var(--menthe-fonce); }
+.record.rec-demandes .go{ color:var(--corail-fonce); }
 .record .go .arrow{ transition:transform .15s ease; }
 .record:hover .go .arrow{ transform:translateX(3px); }
 
@@ -182,7 +187,7 @@ body{
   text-transform:uppercase;
   letter-spacing:.04em;
   color:var(--ink-soft);
-  background:#F3EEDF;
+  background:#EFE9F8;
   padding:.22rem .55rem;
   border-radius:999px;
 }
