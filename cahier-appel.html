@@ -700,6 +700,7 @@ async function initSync(){
         DATA = JSON.parse(snap.data().payload);
       }
       if(!DATA.classes) DATA = { classes: [], absences: {} };
+      trierEleves();
       if(DATA.classes.length && !ui.selectedClass){
         ui.selectedClass = DATA.classes[0].id;
       }
@@ -716,8 +717,21 @@ async function initSync(){
   }
 }
 
+// Classe les élèves par ordre alphabétique. localeCompare avec 'fr' gère
+// correctement les accents (Élodie se range entre Elias et Emma) et
+// 'numeric' évite que Élève 10 passe avant Élève 2.
+function trierEleves(){
+  if(!DATA.classes) return;
+  DATA.classes.forEach(c=>{
+    if(Array.isArray(c.students)){
+      c.students.sort((a,b)=> (a.name||'').localeCompare(b.name||'', 'fr', { sensitivity:'base', numeric:true }));
+    }
+  });
+}
+
 async function saveData(){
   if(!docRef) return;
+  trierEleves();
   try{
     await setDoc(docRef, { payload: JSON.stringify(DATA), updatedAt: Date.now() });
   }catch(e){
