@@ -24,6 +24,8 @@
   --gold:#F3C97E;
   --absent:#C2624B;
   --absent-bg:#FDF0EA;
+  --retard:#A97F2E;
+  --retard-bg:#FDF4E2;
   --present-green:#3E9080;
   --surface:#FFFFFF;
   --border:#E7E0F2;
@@ -203,6 +205,7 @@ input:focus, select:focus{ outline:2px solid var(--gold); outline-offset:1px; }
 .student-row:last-child{ border-bottom:none; }
 .student-row:hover{ background:#F3EEDF; }
 .student-row.absent{ background:var(--absent-bg); }
+.student-row.retard{ background:var(--retard-bg); }
 .student-name{ font-size:.92rem; }
 .student-tag{
   font-size:.72rem;
@@ -214,7 +217,11 @@ input:focus, select:focus{ outline:2px solid var(--gold); outline-offset:1px; }
 }
 .student-row.absent .student-tag{
   color:var(--absent);
-  background:#F3D6D1;
+  background:#F7DACE;
+}
+.student-row.retard .student-tag{
+  color:var(--retard);
+  background:#F7E7C2;
 }
 
 button{
@@ -842,7 +849,12 @@ function renderAppel(){
   const cls = DATA.classes.find(c=>c.id===ui.selectedClass);
   const dayRecord = (DATA.absences[ui.selectedDate] && DATA.absences[ui.selectedDate][cls.id]) || null;
   const absentSet = new Set(dayRecord ? dayRecord.absentIds : []);
+  // lateIds n'existe pas dans les appels enregistrés avant l'ajout des
+  // retards : on retombe alors sur une liste vide.
+  const lateSet = new Set(dayRecord && dayRecord.lateIds ? dayRecord.lateIds : []);
   const taken = dayRecord !== null;
+  const etatDe = sid => absentSet.has(sid) ? 'absent' : lateSet.has(sid) ? 'retard' : '';
+  const libelleDe = e => e==='absent' ? 'Absent' : e==='retard' ? 'En retard' : 'Présent';
 
   panel.innerHTML = `
     <h2 class="section-title">Faire l'appel</h2>
@@ -860,19 +872,20 @@ function renderAppel(){
       ${cls.students.length===0
         ? '<span class="empty">Cette classe n\'a pas encore d\'élèves.</span>'
         : taken
-          ? `Appel <b class="taken">déjà enregistré</b> pour cette date &mdash; ${absentSet.size} absent${absentSet.size>1?'s':''} sur ${cls.students.length}.`
+          ? `Appel <b class="taken">déjà enregistré</b> pour cette date &mdash; ${absentSet.size} absent${absentSet.size>1?'s':''} sur ${cls.students.length}${lateSet.size ? ` · ${lateSet.size} retard${lateSet.size>1?'s':''}` : ''}.`
           : `Appel <b>non encore enregistré</b> pour cette date.`
       }
     </div>
     ${cls.students.length>0 ? `
     <div class="student-list" id="student-list">
       ${cls.students.map(s=>`
-        <div class="student-row ${absentSet.has(s.id)?'absent':''}" data-sid="${s.id}">
+        <div class="student-row ${etatDe(s.id)}" data-sid="${s.id}">
           <span class="student-name">${escapeHtml(s.name)}</span>
-          <span class="student-tag">${absentSet.has(s.id)?'Absent':'Présent'}</span>
+          <span class="student-tag">${libelleDe(etatDe(s.id))}</span>
         </div>
       `).join('')}
     </div>
+    <p class="small-note" style="margin:.5rem 0 0;">Touchez un nom pour faire défiler&nbsp;: présent → absent → en retard.</p>
     <button id="validate-btn">${taken ? 'Mettre à jour l\'appel' : 'Valider l\'appel du jour'}</button>
     ` : ''}
   `;
@@ -890,18 +903,30 @@ function renderAppel(){
   const list = document.getElementById('student-list');
   if(list){
     let workingAbsent = new Set(absentSet);
+    let workingLate = new Set(lateSet);
     list.querySelectorAll('.student-row').forEach(row=>{
       row.addEventListener('click', ()=>{
         const sid = row.dataset.sid;
-        if(workingAbsent.has(sid)){ workingAbsent.delete(sid); }
-        else{ workingAbsent.add(sid); }
-        row.classList.toggle('absent');
-        row.querySelector('.student-tag').textContent = workingAbsent.has(sid) ? 'Absent' : 'Présent';
+        // Cycle : présent → absent → en retard → présent
+        let etat;
+        if(workingAbsent.has(sid)){
+          workingAbsent.delete(sid); workingLate.add(sid); etat = 'retard';
+        }else if(workingLate.has(sid)){
+          workingLate.delete(sid); etat = '';
+        }else{
+          workingAbsent.add(sid); etat = 'absent';
+        }
+        row.classList.remove('absent','retard');
+        if(etat) row.classList.add(etat);
+        row.querySelector('.student-tag').textContent = libelleDe(etat);
       });
     });
     document.getElementById('validate-btn').addEventListener('click', async ()=>{
       if(!DATA.absences[ui.selectedDate]) DATA.absences[ui.selectedDate] = {};
-      DATA.absences[ui.selectedDate][cls.id] = { absentIds: Array.from(workingAbsent) };
+      DATA.absences[ui.selectedDate][cls.id] = {
+        absentIds: Array.from(workingAbsent),
+        lateIds: Array.from(workingLate)
+      };
       await saveData();
       render();
     });
@@ -1199,10 +1224,11 @@ async function confirmImport(){
 
 function computeClassStats(month, classesList){
   return classesList.map(c=>{
-    let daysTaken = 0, totalAbsences = 0;
+    let daysTaken = 0, totalAbsences = 0, totalRetards = 0;
     const perStudent = {};
+    const perStudentRetard = {};
     const perDay = {};
-    c.students.forEach(s=> perStudent[s.id] = 0);
+    c.students.forEach(s=>{ perStudent[s.id] = 0; perStudentRetard[s.id] = 0; });
     Object.keys(DATA.absences).forEach(date=>{
       if(!date.startsWith(month)) return;
       const rec = DATA.absences[date][c.id];
@@ -1214,10 +1240,15 @@ function computeClassStats(month, classesList){
         if(perStudent[sid]===undefined) perStudent[sid]=0;
         perStudent[sid]++;
       });
+      (rec.lateIds || []).forEach(sid=>{
+        if(perStudentRetard[sid]===undefined) perStudentRetard[sid]=0;
+        perStudentRetard[sid]++;
+        totalRetards++;
+      });
     });
     const nbStudents = c.students.length || 1;
     const rate = daysTaken>0 ? (totalAbsences/(nbStudents*daysTaken))*100 : 0;
-    return { cls:c, daysTaken, totalAbsences, rate, perStudent, perDay };
+    return { cls:c, daysTaken, totalAbsences, totalRetards, rate, perStudent, perStudentRetard, perDay };
   });
 }
 
@@ -1279,7 +1310,7 @@ function renderStats(){
     <div class="stat-card">
       <div class="label">${escapeHtml(cs.cls.name)}</div>
       <div class="value ${cs.rate>=10?'rate-high':'rate-ok'}">${cs.daysTaken>0 ? cs.rate.toFixed(1)+'%' : '—'}</div>
-      <div class="small-note" style="margin:.2rem 0 0;">${cs.totalAbsences} absence${cs.totalAbsences>1?'s':''} · ${cs.daysTaken} jour${cs.daysTaken>1?'s':''} d'appel</div>
+      <div class="small-note" style="margin:.2rem 0 0;">${cs.totalAbsences} absence${cs.totalAbsences>1?'s':''}${cs.totalRetards ? ` · ${cs.totalRetards} retard${cs.totalRetards>1?'s':''}` : ''} · ${cs.daysTaken} jour${cs.daysTaken>1?'s':''} d'appel</div>
     </div>
   `).join('');
 
@@ -1307,15 +1338,16 @@ function renderStats(){
   classStats.forEach(cs=>{
     cs.cls.students.forEach(s=>{
       const count = cs.perStudent[s.id] || 0;
-      if(count>0){
-        studentRows.push({ className: cs.cls.name, name: s.name, count });
+      const retards = cs.perStudentRetard[s.id] || 0;
+      if(count>0 || retards>0){
+        studentRows.push({ className: cs.cls.name, name: s.name, count, retards });
       }
     });
   });
-  studentRows.sort((a,b)=> b.count - a.count);
+  studentRows.sort((a,b)=> (b.count - a.count) || (b.retards - a.retards));
 
   const studentTable = studentRows.length===0
-    ? '<p class="empty">Aucune absence individuelle enregistrée ce mois-ci.</p>'
+    ? '<p class="empty">Aucune absence ni retard enregistré ce mois-ci.</p>'
     : `
       <div class="table-wrap">
       <table class="report">
@@ -1323,6 +1355,7 @@ function renderStats(){
           <th>Élève</th>
           ${ui.statClass==='ALL' ? '<th>Classe</th>' : ''}
           <th class="num">Absences</th>
+          <th class="num">Retards</th>
         </tr></thead>
         <tbody>
           ${studentRows.map(r=>`
@@ -1330,6 +1363,7 @@ function renderStats(){
               <td>${escapeHtml(r.name)}</td>
               ${ui.statClass==='ALL' ? `<td>${escapeHtml(r.className)}</td>` : ''}
               <td class="num">${r.count}</td>
+              <td class="num">${r.retards || '—'}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -1340,7 +1374,7 @@ function renderStats(){
   body.innerHTML = `
     <div class="stat-grid">${summaryCards}</div>
     ${rateTable}
-    <h2 class="section-title" style="font-size:1.05rem;">Absences par élève</h2>
+    <h2 class="section-title" style="font-size:1.05rem;">Absences et retards par élève</h2>
     ${studentTable}
   `;
 }
@@ -1385,7 +1419,7 @@ function exportMonthToPdf(month){
       <div class="pblock">
         <div class="pblock-head">
           <span class="pblock-name">${escapeHtml(cs.cls.name)}</span>
-          <span class="pblock-rate">${cs.daysTaken>0 ? cs.rate.toFixed(1)+'%' : 'aucun appel'} ${cs.daysTaken>0 ? `· ${cs.totalAbsences} absence${cs.totalAbsences>1?'s':''} · ${cs.daysTaken} j.` : ''}</span>
+          <span class="pblock-rate">${cs.daysTaken>0 ? cs.rate.toFixed(1)+'%' : 'aucun appel'} ${cs.daysTaken>0 ? `· ${cs.totalAbsences} absence${cs.totalAbsences>1?'s':''}${cs.totalRetards ? ` · ${cs.totalRetards} retard${cs.totalRetards>1?'s':''}` : ''} · ${cs.daysTaken} j.` : ''}</span>
         </div>
         ${buildMiniCalendar(month, cs.perDay)}
         ${studentLines.length ? `<div class="pstudents">${studentLines.map(r=>`<span>${escapeHtml(r.name)} <b>${r.count}</b></span>`).join('')}</div>` : '<div class="pstudents pempty">Aucune absence</div>'}
