@@ -439,6 +439,41 @@ async function initFirebase(){
     remove(id){ return fs.deleteDoc(fs.doc(db,COLLECTION,id)); }
   };
   store.start();
+  recupererDemandesLocales();
+}
+
+/* Demandes restées bloquées sur l'appareil (saisies pendant une coupure, avant
+   la correction du mode hors ligne) : on propose de les verser dans la
+   synchronisation plutôt que de les laisser invisibles. */
+function recupererDemandesLocales(){
+  const locales = localStore.read();
+  if(!locales.length) return;
+  const zone = document.getElementById("notice");
+  zone.innerHTML =
+    `<div class="notice"><b>${locales.length} demande${locales.length>1?"s":""} enregistrée${locales.length>1?"s":""} sur cet appareil</b>
+     n'${locales.length>1?"ont":"a"} jamais rejoint la synchronisation (saisie pendant une coupure de connexion).
+     <div style="display:flex;gap:8px;margin-top:9px">
+       <button id="recup-ok" class="btn primary" style="padding:9px 14px;font-size:14px">Les ajouter maintenant</button>
+       <button id="recup-non" class="btn ghost" style="padding:9px 14px;font-size:14px">Plus tard</button>
+     </div></div>`;
+  document.getElementById("recup-non").onclick = () => { zone.innerHTML = ""; };
+  document.getElementById("recup-ok").onclick = async () => {
+    const btn = document.getElementById("recup-ok");
+    if(!navigator.onLine){
+      btn.textContent = "Connectez-vous d'abord";
+      setTimeout(()=>{ btn.textContent = "Les ajouter maintenant"; }, 2500);
+      return;
+    }
+    btn.disabled = true; btn.textContent = "Envoi…";
+    try{
+      await Promise.all(locales.map(t => { const {id, ...donnees} = t; return store.add(donnees); }));
+      localStorage.removeItem(localStore.key);
+      zone.innerHTML = `<div class="notice">✅ ${locales.length} demande${locales.length>1?"s":""} récupérée${locales.length>1?"s":""} et synchronisée${locales.length>1?"s":""}.</div>`;
+    }catch(e){
+      console.error(e);
+      btn.disabled = false; btn.textContent = "Réessayer";
+    }
+  };
 }
 
 function setStatus(ok, txt){
@@ -589,7 +624,22 @@ function ouvrirForm(id){
 }
 const fermerForm = () => document.getElementById("formScrim").classList.remove("open");
 
-document.getElementById("saveBtn").onclick = async () => {
+/* Le stockage peut ne pas être encore prêt au tout début (connexion en cours). */
+async function avecStore(action){
+  for(let i=0; i<100 && !store; i++) await new Promise(r => setTimeout(r, 100));
+  if(!store) throw new Error("Stockage indisponible");
+  return action(store);
+}
+
+/* Hors ligne, Firestore n'accuse réception d'une écriture qu'au retour du
+   réseau : on ne l'attend donc pas pour refermer la fenêtre. La demande est
+   inscrite immédiatement dans la mémoire locale et s'affiche aussitôt. */
+function signalerEchec(message){
+  const zone = document.getElementById("notice");
+  zone.innerHTML = `<div class="notice"><b>Enregistrement impossible.</b> ${message}</div>`;
+}
+
+document.getElementById("saveBtn").onclick = () => {
   const titre = document.getElementById("f-titre").value.trim();
   if(!titre){ document.getElementById("f-titre").focus(); return; }
   const data = {
@@ -602,12 +652,17 @@ document.getElementById("saveBtn").onclick = async () => {
     statut:       statutChoisi,
     maj:          new Date().toISOString()
   };
-  if(editId) await store.update(editId, data);
-  else       await store.add({...data, creation:new Date().toISOString()});
+  const id = editId;
   fermerForm();
+  avecStore(s => id ? s.update(id, data) : s.add({...data, creation:new Date().toISOString()}))
+    .catch(err => { console.error(err); signalerEchec("La demande n'a pas pu être enregistrée. Réessayez."); });
 };
-document.getElementById("deleteBtn").onclick = async () => {
-  if(editId && confirm("Supprimer définitivement cette demande ?")){ await store.remove(editId); fermerForm(); }
+document.getElementById("deleteBtn").onclick = () => {
+  if(editId && confirm("Supprimer définitivement cette demande ?")){
+    const id = editId;
+    fermerForm();
+    avecStore(s => s.remove(id)).catch(err => { console.error(err); signalerEchec("La suppression n'a pas abouti."); });
+  }
 };
 document.getElementById("cancelBtn").onclick = fermerForm;
 document.getElementById("addBtn").onclick = () => ouvrirForm(null);
