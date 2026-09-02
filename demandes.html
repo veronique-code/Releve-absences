@@ -402,14 +402,35 @@ async function initFirebase(){
   ]);
   const app = initializeApp(firebaseConfig);
   const db  = fs.getFirestore(app);
+
+  // Mémoire hors ligne : les demandes déjà connues restent consultables sans
+  // réseau, et les saisies faites hors ligne sont conservées puis envoyées
+  // automatiquement au retour de la connexion, même après fermeture de l'appli.
+  try{ await fs.enableIndexedDbPersistence(db); }
+  catch(e){ console.warn("Persistance hors ligne indisponible (plusieurs onglets ouverts ?)", e); }
+
   const col = fs.collection(db, COLLECTION);
-  await signInAnonymously(getAuth(app));
+
+  // Hors ligne, on réutilise la session déjà enregistrée sur l'appareil au lieu
+  // de demander une nouvelle connexion (qui échouerait faute de réseau).
+  const auth = getAuth(app);
+  const sessionExistante = await new Promise(res => {
+    const stop = onAuthStateChanged(auth, u => { stop(); res(u); }, () => res(null));
+  });
+  if(!sessionExistante) await signInAnonymously(auth);
 
   store = {
     start(){
-      fs.onSnapshot(col, snap => {
+      fs.onSnapshot(col, { includeMetadataChanges:true }, snap => {
         taches = snap.docs.map(d => ({id:d.id, ...d.data()}));
-        setStatus(true, "Synchronisé");
+        const enAttente = snap.docs.filter(d => d.metadata.hasPendingWrites).length;
+        if(snap.metadata.fromCache){
+          setStatus(false, enAttente
+            ? `Hors ligne — ${enAttente} en attente d'envoi`
+            : "Hors ligne — données de l'appareil");
+        }else{
+          setStatus(true, "Synchronisé");
+        }
         render();
       }, err => { console.error(err); setStatus(false,"Synchro interrompue"); });
     },
@@ -656,7 +677,8 @@ if(LOCAL_ONLY){
     console.error(err);
     document.getElementById("notice").innerHTML =
       `<div class="notice"><b>Synchronisation indisponible.</b> L'application bascule sur les données de cet appareil.
-       Vérifiez la clé <code>apiKey</code> et les règles Firestore de la collection <code>${COLLECTION}</code>.</div>`;
+       Si c'est la première utilisation sur cet appareil, connectez-vous une fois à Internet ;
+       sinon vérifiez la clé <code>apiKey</code> et les règles Firestore de la collection <code>${COLLECTION}</code>.</div>`;
     setStatus(false, "Données locales");
     store = localStore;
     store.start();
