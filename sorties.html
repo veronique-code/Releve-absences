@@ -237,6 +237,7 @@ select:focus, input:focus, textarea:focus{outline:2px solid var(--forest);outlin
 .step.done .box{background:var(--done);border-color:var(--done);}
 .step.pending .box{border-color:var(--pending);}
 .step .lbl{flex:1;color:var(--ink);}
+.step .lbl .when{font-size:11px;color:var(--ink-soft);font-weight:600;text-decoration:none;}
 .step.done .lbl{color:var(--ink-soft);text-decoration:line-through;text-decoration-color:var(--line);}
 .step .date-input{
   font-size:11px;padding:3px 6px;width:112px;border-radius:5px;
@@ -312,6 +313,10 @@ select:focus, input:focus, textarea:focus{outline:2px solid var(--forest);outlin
   padding:9px 0;border-bottom:1px solid var(--line);
 }
 .toggle-row:last-child{border-bottom:none;}
+.subrow{padding:9px 0;border-bottom:1px solid var(--line);}
+.subrow label{display:block;font-size:11.5px;font-weight:600;color:var(--forest-dark);
+  margin-bottom:5px;text-transform:uppercase;letter-spacing:0.03em;}
+.subrow input{width:100%;}
 .switch{
   width:38px;height:22px;border-radius:12px;background:var(--line);position:relative;cursor:pointer;flex-shrink:0;
 }
@@ -383,6 +388,7 @@ select:focus, input:focus, textarea:focus{outline:2px solid var(--forest);outlin
         <option value="attente">Actions en attente</option>
         <option value="completes">Complètes</option>
         <option value="cantine_attente">Cantine à annuler</option>
+        <option value="bus_attente">Bus à réserver</option>
         <option value="regulieres">Sorties régulières</option>
       </select>
       <select id="sortOrder">
@@ -501,8 +507,12 @@ select:focus, input:focus, textarea:focus{outline:2px solid var(--forest);outlin
           <div class="switch" id="s_cantine"></div>
         </div>
         <div class="toggle-row" id="row_busCommande" style="display:none;">
-          <span>Commande de bus passée</span>
+          <span>Bus réservé (commande passée)</span>
           <div class="switch" id="s_busCommande"></div>
+        </div>
+        <div class="subrow" id="row_busCommandeDate" style="display:none;">
+          <label>Date de la réservation du bus</label>
+          <input type="date" id="d_busCommande">
         </div>
         <div class="toggle-row" id="row_busValidation" style="display:none;">
           <span>Commande de bus validée</span>
@@ -566,7 +576,7 @@ const STEP_DEFS = [
   {key:'autorisation', label:"Autorisation de sortie signée"},
   {key:'depl', label:"Enregistrement sur DEPL"},
   {key:'cantine', label:"Annulation cantine faite", conditional:'needsCantine'},
-  {key:'busCommande', label:"Commande de bus passée", conditional:'needsBus'},
+  {key:'busCommande', label:"Bus réservé", conditional:'needsBus'},
   {key:'busValidation', label:"Commande de bus validée", conditional:'needsBus'},
   {key:'agenda', label:"Ajouté à l'agenda"}
 ];
@@ -747,6 +757,7 @@ function render(){
   if(filterStatut === 'attente') list = list.filter(s => { const p=computeProgress(s); return p.done < p.total; });
   if(filterStatut === 'completes') list = list.filter(s => { const p=computeProgress(s); return p.total>0 && p.done === p.total; });
   if(filterStatut === 'cantine_attente') list = list.filter(s => s.needsCantine && !(s.steps.cantine && s.steps.cantine.done));
+  if(filterStatut === 'bus_attente') list = list.filter(s => hasBus(s) && !(s.steps.busCommande && s.steps.busCommande.done));
 
   list.sort((a,b)=> sortOrder==='date_asc'
     ? firstDate(a).localeCompare(firstDate(b))
@@ -861,6 +872,22 @@ function formatDate(d){
 function transportLabel(t){
   return {aucun:"Sur place", pied:"À pied", bus_mairie:"Bus mairie", autre_bus:"Autre bus"}[t] || t;
 }
+function hasBus(s){
+  return !!s.needsBus || s.transport === 'bus_mairie' || s.transport === 'autre_bus';
+}
+function transportIcon(t){
+  return {aucun:"📍", pied:"🚶", bus_mairie:"🚌", autre_bus:"🚌"}[t] || "📍";
+}
+function busTag(s){
+  if(!hasBus(s)){
+    return `<span class="meta-tag muted">🚌 Sans bus</span>`;
+  }
+  const st = s.steps.busCommande;
+  if(st && st.done){
+    return `<span class="meta-tag ok">🚌 Bus réservé${st.date ? ' le ' + formatDate(st.date) : ''}</span>`;
+  }
+  return `<span class="meta-tag pending">🚌 Bus à réserver</span>`;
+}
 function cantineTag(s){
   if(!s.needsCantine){
     return `<span class="meta-tag muted">🍽️ Cantine non concernée</span>`;
@@ -912,9 +939,11 @@ function cardHtml(s){
   const late = incomplete && firstDate(s) < todayStr();
   const stepsHtml = STEP_DEFS.filter(d=> !d.conditional || s[d.conditional]).map(d=>{
     const st = s.steps[d.key] || {done:false};
+    const when = (d.key === 'busCommande' && st.done && st.date)
+      ? ` <span class="when">· le ${formatDate(st.date)}</span>` : '';
     return `<div class="step ${st.done?'done':'pending'}" id="step_${s.id}_${d.key}">
       <div class="box">${st.done?'✓':''}</div>
-      <div class="lbl">${d.label}</div>
+      <div class="lbl">${d.label}${when}</div>
     </div>`;
   }).join('');
 
@@ -930,7 +959,8 @@ function cardHtml(s){
       <div class="meta">
         ${dateLine(s)}
         ${s.horaires ? `<span>🕐 ${escapeHtml(s.horaires)}</span>` : ''}
-        <span>🚌 ${transportLabel(s.transport)}</span>
+        <span>${transportIcon(s.transport)} ${transportLabel(s.transport)}</span>
+        ${busTag(s)}
         ${cantineTag(s)}
       </div>
       <div class="classes">${s.classes.map(c=>`<span class="chip">${c}</span>`).join('')}</div>
@@ -1065,6 +1095,12 @@ function updateBusRowsVisibility(){
   const needsBus = (t === 'bus_mairie' || t === 'autre_bus');
   document.getElementById('row_busCommande').style.display = needsBus ? 'flex' : 'none';
   document.getElementById('row_busValidation').style.display = needsBus ? 'flex' : 'none';
+  const commandeOn = document.getElementById('s_busCommande').dataset.on === '1';
+  const dateRow = document.getElementById('row_busCommandeDate');
+  dateRow.style.display = (needsBus && commandeOn) ? 'block' : 'none';
+  if(needsBus && commandeOn && !document.getElementById('d_busCommande').value){
+    document.getElementById('d_busCommande').value = todayStr();
+  }
 }
 
 function openModal(id){
@@ -1101,6 +1137,9 @@ function openModal(id){
     const st = s && s.steps[d.key] ? s.steps[d.key].done : false;
     setSwitch('s_'+d.key, st);
   });
+
+  document.getElementById('d_busCommande').value =
+    (s && s.steps && s.steps.busCommande) ? (s.steps.busCommande.date || '') : '';
 
   updateBusRowsVisibility();
 
@@ -1148,7 +1187,12 @@ function saveModal(){
     const done = el.dataset.on === '1';
     const prev = editingId ? (sorties.find(x=>x.id===editingId)||{}).steps : null;
     const prevDate = prev && prev[d.key] ? prev[d.key].date : '';
-    steps[d.key] = {done, date: done ? (prevDate || todayStr()) : ''};
+    if(d.key === 'busCommande'){
+      const saisie = document.getElementById('d_busCommande').value;
+      steps[d.key] = {done, date: done ? (saisie || prevDate || todayStr()) : ''};
+    }else{
+      steps[d.key] = {done, date: done ? (prevDate || todayStr()) : ''};
+    }
   });
 
   const record = {
