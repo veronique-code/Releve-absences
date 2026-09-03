@@ -283,6 +283,31 @@ select:focus, input:focus, textarea:focus{outline:2px solid var(--forest);outlin
   cursor:pointer;background:#fff;color:var(--ink);user-select:none;
 }
 .class-opt.selected{background:var(--forest);color:#fff;border-color:var(--forest);}
+
+/* SORTIES RÉGULIÈRES */
+.seance-list{
+  display:flex;flex-wrap:wrap;gap:6px;max-height:190px;overflow:auto;
+  padding:9px;border:1px solid var(--line);border-radius:10px;background:#fff;
+}
+.seance-item{
+  font-size:12px;padding:4px 9px;border-radius:8px;cursor:pointer;
+  border:1px solid var(--line);background:var(--paper-dark);color:var(--forest-dark);font-weight:600;
+}
+.seance-item.off{background:#fff;color:var(--ink-soft);opacity:.55;text-decoration:line-through;font-weight:400;}
+.seance-empty{font-size:12.5px;color:var(--ink-soft);}
+.seance-hint{font-size:11.5px;color:var(--ink-soft);margin:6px 0 0;line-height:1.45;}
+.seance-count{float:right;text-transform:none;letter-spacing:0;color:var(--ink-soft);font-weight:600;}
+.badge-serie{
+  display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:0.04em;
+  text-transform:uppercase;padding:2px 7px;border-radius:6px;
+  background:var(--ochre-light);color:#8A6A1E;margin-left:8px;vertical-align:middle;
+}
+.card-dates{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0 0;}
+.card-date{font-size:11px;padding:3px 7px;border-radius:7px;background:var(--paper-dark);color:var(--ink-soft);}
+.card-date.past{opacity:.42;}
+.card-date.next{background:var(--forest);color:#fff;font-weight:700;}
+.card-dates-more{font-size:11px;color:var(--ink-soft);align-self:center;}
+.next-seance{font-size:12.5px;color:var(--forest-dark);font-weight:600;margin-top:8px;}
 .toggle-row{display:flex;align-items:center;justify-content:space-between;
   padding:9px 0;border-bottom:1px solid var(--line);
 }
@@ -358,6 +383,7 @@ select:focus, input:focus, textarea:focus{outline:2px solid var(--forest);outlin
         <option value="attente">Actions en attente</option>
         <option value="completes">Complètes</option>
         <option value="cantine_attente">Cantine à annuler</option>
+        <option value="regulieres">Sorties régulières</option>
       </select>
       <select id="sortOrder">
         <option value="date_asc">Date ↑</option>
@@ -406,9 +432,15 @@ select:focus, input:focus, textarea:focus{outline:2px solid var(--forest);outlin
         <label>Destination</label>
         <input type="text" id="fDestination" placeholder="Ex. Musée de la mer, Sanary">
       </div>
+      <div class="field">
+        <div class="toggle-row">
+          <span style="font-size:13px;">Sortie régulière (plusieurs séances sur une période)</span>
+          <div class="switch" id="fRecurrentToggle"></div>
+        </div>
+      </div>
       <div class="row2">
         <div class="field">
-          <label>Date de la sortie</label>
+          <label id="lblDate">Date de la sortie</label>
           <input type="date" id="fDate">
         </div>
         <div class="field">
@@ -416,6 +448,23 @@ select:focus, input:focus, textarea:focus{outline:2px solid var(--forest);outlin
           <input type="text" id="fHoraires" placeholder="Ex. 9h00 – 16h00">
         </div>
       </div>
+
+      <div id="recurrentBlock" style="display:none;">
+        <div class="field">
+          <label>Fin de la période</label>
+          <input type="date" id="fDateFin">
+        </div>
+        <div class="field">
+          <label>Jours de la semaine</label>
+          <div class="class-picker" id="dayPicker"></div>
+        </div>
+        <div class="field">
+          <label>Séances <span class="seance-count" id="seanceCount"></span></label>
+          <div class="seance-list" id="seanceList"></div>
+          <p class="seance-hint">Cliquez sur une date pour la retirer (vacances, jour férié, séance annulée). Cliquez à nouveau pour la remettre.</p>
+        </div>
+      </div>
+
       <div class="field">
         <label>Classes concernées</label>
         <div class="class-picker" id="classPicker"></div>
@@ -438,7 +487,7 @@ select:focus, input:focus, textarea:focus{outline:2px solid var(--forest);outlin
       </div>
 
       <div class="field">
-        <label>Suivi des étapes</label>
+        <label id="lblSteps">Suivi des étapes</label>
         <div class="toggle-row">
           <span>Autorisation de sortie signée</span>
           <div class="switch" id="s_autorisation"></div>
@@ -524,7 +573,7 @@ const STEP_DEFS = [
 
 let sorties = [];
 let editingId = null;
-let modalState = { classes:[], needsCantine:false, steps:{} };
+let modalState = { classes:[], needsCantine:false, steps:{}, recurrent:false, jours:[], exclusions:[] };
 
 let docRef = null;
 
@@ -610,7 +659,65 @@ function importData(file){
   reader.readAsText(file);
 }
 
-function todayStr(){ return new Date().toISOString().slice(0,10); }
+function ymd(d){
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const j = String(d.getDate()).padStart(2,'0');
+  return `${d.getFullYear()}-${m}-${j}`;
+}
+function todayStr(){ return ymd(new Date()); }
+
+/* ---- SORTIES RÉGULIÈRES ---- */
+const JOURS = [
+  {v:1, label:'Lundi'},
+  {v:2, label:'Mardi'},
+  {v:3, label:'Mercredi'},
+  {v:4, label:'Jeudi'},
+  {v:5, label:'Vendredi'}
+];
+const JOURS_PLURIEL = {1:'lundis',2:'mardis',3:'mercredis',4:'jeudis',5:'vendredis'};
+
+function generateSeries(start, end, jours){
+  const out = [];
+  if(!start || !end || !jours || !jours.length) return out;
+  if(end < start) return out;
+  let d = new Date(start+'T00:00:00');
+  const last = new Date(end+'T00:00:00');
+  let guard = 0;
+  while(d <= last && guard++ < 800){
+    if(jours.includes(d.getDay())) out.push(ymd(d));
+    d.setDate(d.getDate()+1);
+  }
+  return out;
+}
+
+/* Dates effectives d'une sortie : la série pour une sortie régulière, la date unique sinon */
+function seanceDates(s){
+  if(s.recurrent && Array.isArray(s.dates) && s.dates.length) return s.dates;
+  return s.date ? [s.date] : [];
+}
+function firstDate(s){ const d = seanceDates(s); return d[0] || s.date || ''; }
+function lastDate(s){ const d = seanceDates(s); return d[d.length-1] || s.date || ''; }
+function nextDate(s){
+  const t = todayStr();
+  return seanceDates(s).find(d => d >= t) || '';
+}
+function joursLabel(s){
+  if(!s.recurrent || !s.jours || !s.jours.length) return '';
+  const noms = s.jours.slice().sort().map(v => JOURS_PLURIEL[v]);
+  return 'les ' + (noms.length > 1
+    ? noms.slice(0,-1).join(', ') + ' et ' + noms[noms.length-1]
+    : noms[0]);
+}
+function formatDateCourt(d){
+  if(!d) return '';
+  const dt = new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('fr-FR', {day:'numeric', month:'short'});
+}
+function formatDateLong(d){
+  if(!d) return '';
+  const dt = new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'});
+}
 
 function computeProgress(s){
   const applicable = STEP_DEFS.filter(d => !d.conditional || s[d.conditional]);
@@ -634,13 +741,16 @@ function render(){
     list = list.filter(s => s.classes.includes(filterClasse));
   }
   const today = todayStr();
-  if(filterStatut === 'avenir') list = list.filter(s => s.date >= today);
-  if(filterStatut === 'passees') list = list.filter(s => s.date < today);
+  if(filterStatut === 'avenir') list = list.filter(s => lastDate(s) >= today);
+  if(filterStatut === 'passees') list = list.filter(s => lastDate(s) < today);
+  if(filterStatut === 'regulieres') list = list.filter(s => s.recurrent);
   if(filterStatut === 'attente') list = list.filter(s => { const p=computeProgress(s); return p.done < p.total; });
   if(filterStatut === 'completes') list = list.filter(s => { const p=computeProgress(s); return p.total>0 && p.done === p.total; });
   if(filterStatut === 'cantine_attente') list = list.filter(s => s.needsCantine && !(s.steps.cantine && s.steps.cantine.done));
 
-  list.sort((a,b)=> sortOrder==='date_asc' ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date));
+  list.sort((a,b)=> sortOrder==='date_asc'
+    ? firstDate(a).localeCompare(firstDate(b))
+    : firstDate(b).localeCompare(firstDate(a)));
 
   renderStats();
   renderAlerts();
@@ -674,7 +784,7 @@ function render(){
 function renderStats(){
   const today = todayStr();
   const total = sorties.length;
-  const avenir = sorties.filter(s=>s.date>=today).length;
+  const avenir = sorties.filter(s=>lastDate(s)>=today).length;
   const attente = sorties.filter(s=>{const p=computeProgress(s); return p.done<p.total;}).length;
   document.getElementById('stats').innerHTML = `
     <div class="stat-card"><div class="num">${total}</div><div class="lbl">Sorties enregistrées</div></div>
@@ -692,7 +802,7 @@ function renderAlerts(){
   const pending = sorties
     .map(s => ({s, p: computeProgress(s)}))
     .filter(x => x.p.done < x.p.total)
-    .sort((a,b) => a.s.date.localeCompare(b.s.date));
+    .sort((a,b) => firstDate(a.s).localeCompare(firstDate(b.s)));
 
   if(pending.length === 0){
     banner.classList.add('alert-none');
@@ -700,8 +810,8 @@ function renderAlerts(){
   }
   banner.classList.remove('alert-none');
 
-  const late = pending.filter(x => x.s.date < today);
-  const rest = pending.filter(x => x.s.date >= today);
+  const late = pending.filter(x => firstDate(x.s) < today);
+  const rest = pending.filter(x => firstDate(x.s) >= today);
 
   document.getElementById('alertBannerTitle').textContent =
     late.length > 0
@@ -716,14 +826,15 @@ function renderAlerts(){
   const shown = ordered.slice(0, 6);
 
   list.innerHTML = shown.map(({s,p}) => {
-    const du = daysUntil(s.date);
+    const ref = firstDate(s);
+    const du = daysUntil(ref);
     let tag;
-    if(s.date < today) tag = `<span class="alert-tag late">En retard</span>`;
+    if(ref < today) tag = `<span class="alert-tag late">En retard</span>`;
     else if(du <= 3) tag = `<span class="alert-tag soon">${du===0?"Aujourd'hui":du===1?"Demain":"Dans "+du+" j"}</span>`;
-    else tag = `<span class="alert-tag upcoming">${formatDate(s.date)}</span>`;
+    else tag = `<span class="alert-tag upcoming">${formatDate(ref)}</span>`;
     return `<div class="alert-item" data-id="${s.id}">
       <div class="ai-left">
-        <span class="ai-dest">${escapeHtml(s.destination || 'Sortie sans titre')}</span>
+        <span class="ai-dest">${escapeHtml(s.destination || 'Sortie sans titre')}${s.recurrent ? ' <span style="font-weight:400;font-size:11.5px;">(série)</span>' : ''}</span>
         <span class="ai-classes">${s.classes.join(', ')}</span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
@@ -766,12 +877,39 @@ function daysUntil(dateStr){
   return Math.round((d-today)/86400000);
 }
 
+function dateLine(s){
+  if(s.recurrent){
+    const d = seanceDates(s);
+    const n = d.length;
+    return `<span>📅 Du ${formatDate(firstDate(s))} au ${formatDate(lastDate(s))}</span>`
+         + `<span>🔁 ${joursLabel(s)}</span>`
+         + `<span>${n} séance${n>1?'s':''}</span>`;
+  }
+  return `<span>📅 ${formatDate(s.date)}</span>`;
+}
+
+function datesBlock(s){
+  if(!s.recurrent) return '';
+  const dates = seanceDates(s);
+  if(!dates.length) return '';
+  const today = todayStr();
+  const nxt = nextDate(s);
+  const chips = dates.map(d=>{
+    const cls = d === nxt ? 'next' : (d < today ? 'past' : '');
+    return `<span class="card-date ${cls}">${formatDateCourt(d)}</span>`;
+  }).join('');
+  const info = nxt
+    ? `<div class="next-seance">Prochaine séance : ${formatDateLong(nxt)}</div>`
+    : `<div class="next-seance" style="color:var(--ink-soft);">Série terminée</div>`;
+  return `<div class="card-dates">${chips}</div>${info}`;
+}
+
 function cardHtml(s){
   const p = computeProgress(s);
   const pct = p.total ? Math.round((p.done/p.total)*100) : 100;
   const color = tabColorFor(s.classes[0] || '');
   const incomplete = p.done < p.total;
-  const late = incomplete && s.date < todayStr();
+  const late = incomplete && firstDate(s) < todayStr();
   const stepsHtml = STEP_DEFS.filter(d=> !d.conditional || s[d.conditional]).map(d=>{
     const st = s.steps[d.key] || {done:false};
     return `<div class="step ${st.done?'done':'pending'}" id="step_${s.id}_${d.key}">
@@ -788,9 +926,9 @@ function cardHtml(s){
     ${badge}
     <div class="tab" style="background:${color};"></div>
     <div class="card-head">
-      <p class="dest">${escapeHtml(s.destination || 'Sortie sans titre')}</p>
+      <p class="dest">${escapeHtml(s.destination || 'Sortie sans titre')}${s.recurrent ? '<span class="badge-serie">Régulière</span>' : ''}</p>
       <div class="meta">
-        <span>📅 ${formatDate(s.date)}</span>
+        ${dateLine(s)}
         ${s.horaires ? `<span>🕐 ${escapeHtml(s.horaires)}</span>` : ''}
         <span>🚌 ${transportLabel(s.transport)}</span>
         ${cantineTag(s)}
@@ -801,6 +939,7 @@ function cardHtml(s){
       <div class="progress-bar"><div class="fill" style="width:${pct}%;"></div></div>
       <div class="progress-label">${p.done}/${p.total} étapes complétées</div>
     </div>
+    ${datesBlock(s)}
     <div class="steps">${stepsHtml}</div>
     ${s.notes ? `<div class="card-notes">${escapeHtml(s.notes)}</div>` : ''}
     <div class="card-foot">
@@ -847,6 +986,58 @@ function buildClassPicker(){
   });
 }
 
+function buildDayPicker(){
+  const picker = document.getElementById('dayPicker');
+  picker.innerHTML = JOURS.map(j=>`<div class="class-opt" data-jour="${j.v}">${j.label}</div>`).join('');
+  picker.querySelectorAll('.class-opt').forEach(el=>{
+    const v = Number(el.dataset.jour);
+    if(modalState.jours.includes(v)) el.classList.add('selected');
+    el.addEventListener('click', ()=>{
+      const idx = modalState.jours.indexOf(v);
+      if(idx > -1) modalState.jours.splice(idx,1); else modalState.jours.push(v);
+      el.classList.toggle('selected');
+      refreshSeries();
+    });
+  });
+}
+
+function refreshSeries(){
+  const list = document.getElementById('seanceList');
+  const count = document.getElementById('seanceCount');
+  if(!modalState.recurrent){ return; }
+  const debut = document.getElementById('fDate').value;
+  const fin = document.getElementById('fDateFin').value;
+  const all = generateSeries(debut, fin, modalState.jours);
+
+  if(!all.length){
+    list.innerHTML = '<span class="seance-empty">Renseignez la date de début, la fin de la période et au moins un jour de la semaine.</span>';
+    count.textContent = '';
+    return;
+  }
+  const retenues = all.filter(d => !modalState.exclusions.includes(d));
+  count.textContent = `${retenues.length} séance${retenues.length>1?'s':''} retenue${retenues.length>1?'s':''} sur ${all.length}`;
+  list.innerHTML = all.map(d=>{
+    const off = modalState.exclusions.includes(d) ? ' off' : '';
+    return `<span class="seance-item${off}" data-date="${d}">${formatDateCourt(d)}</span>`;
+  }).join('');
+  list.querySelectorAll('.seance-item').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const d = el.dataset.date;
+      const idx = modalState.exclusions.indexOf(d);
+      if(idx > -1) modalState.exclusions.splice(idx,1); else modalState.exclusions.push(d);
+      refreshSeries();
+    });
+  });
+}
+
+function updateRecurrentUI(){
+  const on = modalState.recurrent;
+  document.getElementById('recurrentBlock').style.display = on ? 'block' : 'none';
+  document.getElementById('lblDate').textContent = on ? 'Première séance' : 'Date de la sortie';
+  document.getElementById('lblSteps').textContent = on ? 'Suivi des étapes (pour toute la période)' : 'Suivi des étapes';
+  if(on) refreshSeries();
+}
+
 function setSwitch(elId, on){
   const el = document.getElementById(elId);
   el.classList.toggle('on', !!on);
@@ -860,6 +1051,10 @@ function wireSwitch(elId){
     if(elId === 'fCantineToggle'){
       modalState.needsCantine = !on;
       document.getElementById('row_cantine').style.display = modalState.needsCantine ? 'flex' : 'none';
+    }
+    if(elId === 'fRecurrentToggle'){
+      modalState.recurrent = !on;
+      updateRecurrentUI();
     }
     updateBusRowsVisibility();
   });
@@ -878,13 +1073,21 @@ function openModal(id){
 
   document.getElementById('modalTitle').textContent = s ? 'Modifier la sortie' : 'Nouvelle sortie';
   document.getElementById('fDestination').value = s ? s.destination : '';
-  document.getElementById('fDate').value = s ? s.date : '';
+  document.getElementById('fDate').value = s ? ((s.recurrent && s.dateDebut) ? s.dateDebut : s.date) : '';
   document.getElementById('fHoraires').value = s ? s.horaires : '';
   document.getElementById('fTransport').value = s ? s.transport : 'aucun';
   document.getElementById('fNotes').value = s ? (s.notes||'') : '';
 
   modalState.classes = s ? s.classes.slice() : [];
   modalState.needsCantine = s ? !!s.needsCantine : false;
+  modalState.recurrent = s ? !!s.recurrent : false;
+  modalState.jours = s && s.jours ? s.jours.slice() : [];
+  modalState.exclusions = s && s.exclusions ? s.exclusions.slice() : [];
+  document.getElementById('fDateFin').value = s && s.dateFin ? s.dateFin : '';
+
+  setSwitch('fRecurrentToggle', modalState.recurrent);
+  buildDayPicker();
+  updateRecurrentUI();
 
   buildClassPicker();
   document.querySelectorAll('.class-opt').forEach(el=>{
@@ -916,6 +1119,24 @@ function saveModal(){
     alert('Merci de renseigner au minimum la destination et la date de la sortie.');
     return;
   }
+  const recurrent = modalState.recurrent;
+  let dateFin = '', jours = [], exclusions = [], dates = [];
+  if(recurrent){
+    dateFin = document.getElementById('fDateFin').value;
+    jours = modalState.jours.slice().sort();
+    if(!dateFin || !jours.length){
+      alert('Pour une sortie régulière, indiquez la fin de la période et au moins un jour de la semaine.');
+      return;
+    }
+    const all = generateSeries(date, dateFin, jours);
+    exclusions = modalState.exclusions.filter(d => all.includes(d));
+    dates = all.filter(d => !exclusions.includes(d));
+    if(!dates.length){
+      alert('Aucune séance ne correspond à cette période. Vérifiez les dates et les jours retenus.');
+      return;
+    }
+  }
+
   const horaires = document.getElementById('fHoraires').value.trim();
   const transport = document.getElementById('fTransport').value;
   const notes = document.getElementById('fNotes').value.trim();
@@ -932,7 +1153,10 @@ function saveModal(){
 
   const record = {
     id: editingId || ('s_' + Date.now()),
-    destination, date, horaires, transport,
+    destination,
+    date: recurrent ? dates[0] : date,
+    horaires, transport,
+    recurrent, dateDebut: recurrent ? date : '', dateFin, jours, exclusions, dates,
     classes: modalState.classes.slice(),
     needsCantine: modalState.needsCantine,
     needsBus,
@@ -967,6 +1191,9 @@ document.getElementById('alertToggleBtn').addEventListener('click', (e)=>{
 });
 
 wireSwitch('fCantineToggle');
+wireSwitch('fRecurrentToggle');
+document.getElementById('fDate').addEventListener('change', refreshSeries);
+document.getElementById('fDateFin').addEventListener('change', refreshSeries);
 STEP_DEFS.forEach(d=> wireSwitch('s_'+d.key));
 
 document.getElementById('btnExport').addEventListener('click', exportData);
