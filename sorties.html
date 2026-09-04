@@ -73,6 +73,7 @@ header.top .subtitle{font-size:13px;color:var(--ink-soft);margin-top:2px;}
 .stat-card .num{font-family:'Fraunces',serif;font-size:26px;font-weight:700;color:var(--forest-dark);}
 .stat-card .lbl{font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;}
 .stat-card.warn .num{color:var(--pending);}
+.stat-card.done .num{color:var(--forest);}
 
 /* ALERTES */
 .alert-banner{
@@ -163,7 +164,11 @@ header.top .subtitle{font-size:13px;color:var(--ink-soft);margin-top:2px;}
   display:flex;align-items:center;gap:5px;
 }
 .card-badge.late{background:var(--terracotta);}
+.card-badge.archived{background:var(--forest);}
 .card.is-late{border-color:#E7C0AE;}
+.card.is-archived{background:#FBFAF7;opacity:.85;}
+.card.is-archived:hover{opacity:1;}
+.card.is-archived .progress-row .fill{background:var(--forest);}
 
 /* TOOLBAR */
 .toolbar{
@@ -386,7 +391,7 @@ select:focus, input:focus, textarea:focus{outline:2px solid var(--forest);outlin
         <option value="avenir">À venir</option>
         <option value="passees">Passées</option>
         <option value="attente">Actions en attente</option>
-        <option value="completes">Complètes</option>
+        <option value="archivees">Archivées</option>
         <option value="cantine_attente">Cantine à annuler</option>
         <option value="bus_attente">Bus à réserver</option>
         <option value="regulieres">Sorties régulières</option>
@@ -735,6 +740,11 @@ function computeProgress(s){
   return {done: done.length, total: applicable.length};
 }
 
+function isArchived(s){
+  const p = computeProgress(s);
+  return p.total > 0 && p.done === p.total;
+}
+
 function populateFilterClasse(){
   const sel = document.getElementById('filterClasse');
   sel.innerHTML = '<option value="toutes">Toutes les classes</option>' +
@@ -750,12 +760,18 @@ function render(){
   if(filterClasse !== 'toutes'){
     list = list.filter(s => s.classes.includes(filterClasse));
   }
+  const showArchived = (filterStatut === 'archivees');
+  list = list.filter(s => isArchived(s) === showArchived);
+
+  const archivedCount = sorties.filter(isArchived).length;
+  const optArch = document.querySelector('#filterStatut option[value="archivees"]');
+  if(optArch) optArch.textContent = archivedCount ? `Archivées (${archivedCount})` : 'Archivées';
+
   const today = todayStr();
   if(filterStatut === 'avenir') list = list.filter(s => lastDate(s) >= today);
   if(filterStatut === 'passees') list = list.filter(s => lastDate(s) < today);
   if(filterStatut === 'regulieres') list = list.filter(s => s.recurrent);
   if(filterStatut === 'attente') list = list.filter(s => { const p=computeProgress(s); return p.done < p.total; });
-  if(filterStatut === 'completes') list = list.filter(s => { const p=computeProgress(s); return p.total>0 && p.done === p.total; });
   if(filterStatut === 'cantine_attente') list = list.filter(s => s.needsCantine && !(s.steps.cantine && s.steps.cantine.done));
   if(filterStatut === 'bus_attente') list = list.filter(s => hasBus(s) && !(s.steps.busCommande && s.steps.busCommande.done));
 
@@ -770,6 +786,11 @@ function render(){
   const empty = document.getElementById('emptyState');
   if(list.length === 0){
     grid.innerHTML = '';
+    empty.innerHTML = showArchived
+      ? '<div class="display">Aucune sortie archivée</div><div>Une sortie rejoint les archives dès que toutes ses étapes sont cochées.</div>'
+      : (sorties.length === 0
+          ? '<div class="display">Aucune sortie enregistrée</div><div>Cliquez sur « + Nouvelle sortie » pour commencer votre carnet.</div>'
+          : '<div class="display">Aucune sortie en cours</div><div>Tout est traité. Les sorties terminées sont dans « Archivées ».</div>');
     empty.style.display = 'block';
     return;
   }
@@ -797,10 +818,12 @@ function renderStats(){
   const total = sorties.length;
   const avenir = sorties.filter(s=>lastDate(s)>=today).length;
   const attente = sorties.filter(s=>{const p=computeProgress(s); return p.done<p.total;}).length;
+  const archivees = sorties.filter(isArchived).length;
   document.getElementById('stats').innerHTML = `
     <div class="stat-card"><div class="num">${total}</div><div class="lbl">Sorties enregistrées</div></div>
     <div class="stat-card"><div class="num">${avenir}</div><div class="lbl">À venir</div></div>
     <div class="stat-card warn"><div class="num">${attente}</div><div class="lbl">Avec actions en attente</div></div>
+    <div class="stat-card done"><div class="num">${archivees}</div><div class="lbl">Archivées</div></div>
   `;
 }
 
@@ -949,9 +972,9 @@ function cardHtml(s){
 
   const badge = incomplete
     ? `<div class="card-badge ${late?'late':''}">⚠ ${p.total-p.done} en attente</div>`
-    : '';
+    : `<div class="card-badge archived">✓ Archivée</div>`;
 
-  return `<div class="card ${late?'is-late':''}">
+  return `<div class="card ${late?'is-late':''} ${incomplete?'':'is-archived'}">
     ${badge}
     <div class="tab" style="background:${color};"></div>
     <div class="card-head">
