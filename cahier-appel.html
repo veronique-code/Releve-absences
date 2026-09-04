@@ -329,6 +329,53 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   font-size:.83rem;
 }
 
+.day-nav{
+  display:flex;
+  align-items:center;
+  gap:.5rem;
+  flex-wrap:wrap;
+  margin-bottom:1.1rem;
+}
+.day-nav .arrow{ padding:.55rem .85rem; }
+.day-title{
+  font-family:'Fraunces',serif;
+  font-weight:600;
+  font-size:1.05rem;
+  margin:0 0 1rem;
+  color:var(--ink);
+}
+.day-list{ margin-bottom:1.4rem; }
+.day-row{
+  display:flex;
+  gap:.9rem;
+  padding:.6rem 0;
+  border-bottom:1px solid var(--border);
+  align-items:baseline;
+}
+.day-row:last-child{ border-bottom:none; }
+.day-class{
+  flex:0 0 140px;
+  font-family:'Fraunces',serif;
+  font-weight:600;
+  font-size:.95rem;
+}
+.day-names{ flex:1; display:flex; flex-wrap:wrap; gap:.3rem .4rem; }
+.day-chip{
+  font-size:.85rem;
+  padding:.15rem .5rem;
+  border-radius:6px;
+  background:var(--absent-bg);
+  color:var(--absent);
+}
+.day-chip.ret{ background:var(--retard-bg); color:var(--retard); }
+.day-ok{ font-size:.85rem; color:var(--present-green); }
+.day-pending{ font-size:.85rem; color:var(--ink-soft); font-style:italic; }
+.day-row.pending .day-class{ color:var(--ink-soft); }
+@media(max-width:640px){
+  .day-row{ flex-direction:column; gap:.3rem; }
+  .day-class{ flex:none; }
+}
+
 #print-area{ display:none; }
 
 @media print{
@@ -412,6 +459,16 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   padding-top:3px;
 }
 .pstudents.pempty{ color:#9A947F; font-style:italic; }
+
+table.pday{ width:100%; border-collapse:collapse; font-size:10px; color:#25344B; }
+table.pday th{
+  text-align:left; font-size:8px; text-transform:uppercase; letter-spacing:.04em;
+  color:#5B6B85; border-bottom:1.5px solid #25344B; padding:3px 4px;
+}
+table.pday td{ padding:4px; border-bottom:1px solid #E7E0F2; vertical-align:top; }
+table.pday td.pday-cls{ font-weight:600; white-space:nowrap; width:110px; }
+table.pday td.pday-none{ color:#9A947F; font-style:italic; }
+.pday-foot{ margin-top:10px; font-size:9px; color:#5B6B85; }
 
 .stat-grid{
   display:grid;
@@ -556,8 +613,8 @@ table.report td.num{ text-align:right; font-variant-numeric:tabular-nums; }
   .masthead h1{ margin-left:34px; font-size:1.35rem; }
   .masthead p{ margin-left:34px; font-size:.78rem; }
   .sync-bar{ padding:.6rem 1rem; }
-  .tabs{ padding:0 .6rem; }
-  .tab{ padding:.8rem .8rem .6rem; font-size:.88rem; flex:1; text-align:center; }
+  .tabs{ padding:0 .6rem; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .tab{ padding:.8rem .65rem .6rem; font-size:.82rem; flex:0 0 auto; white-space:nowrap; text-align:center; }
   .panel{ padding:1.3rem 1rem 1.8rem 1.7rem; background-size:100% 25px; }
   .panel::before{ left:34px; }
   h2.section-title{ font-size:1.05rem; }
@@ -619,11 +676,13 @@ table.report td.num{ text-align:right; font-variant-numeric:tabular-nums; }
 
   <div class="tabs">
     <button class="tab active" data-tab="appel">Aujourd'hui</button>
+    <button class="tab" data-tab="jour">Absents du jour</button>
     <button class="tab" data-tab="classes">Classes</button>
     <button class="tab" data-tab="stats">Statistiques</button>
   </div>
 
   <div class="panel" id="panel-appel"></div>
+  <div class="panel" id="panel-jour" style="display:none"></div>
   <div class="panel" id="panel-classes" style="display:none"></div>
   <div class="panel" id="panel-stats" style="display:none"></div>
 
@@ -668,7 +727,7 @@ if(window.pdfjsLib){
 }
 let DATA = { classes: [], absences: {} };
 let importCandidates = [];
-let ui = { tab:'appel', selectedClass:null, selectedDate: todayISO(), statMonth: currentMonth(), statClass:'ALL' };
+let ui = { tab:'appel', selectedClass:null, selectedDate: todayISO(), jourDate: todayISO(), statMonth: currentMonth(), statClass:'ALL' };
 
 function todayISO(){
   const d = new Date();
@@ -826,10 +885,12 @@ function render(){
     t.classList.toggle('active', t.dataset.tab===ui.tab);
   });
   document.getElementById('panel-appel').style.display = ui.tab==='appel' ? 'block':'none';
+  document.getElementById('panel-jour').style.display = ui.tab==='jour' ? 'block':'none';
   document.getElementById('panel-classes').style.display = ui.tab==='classes' ? 'block':'none';
   document.getElementById('panel-stats').style.display = ui.tab==='stats' ? 'block':'none';
 
   if(ui.tab==='appel') renderAppel();
+  if(ui.tab==='jour') renderJour();
   if(ui.tab==='classes') renderClasses();
   if(ui.tab==='stats') renderStats();
 }
@@ -932,6 +993,202 @@ function renderAppel(){
     });
   }
 }
+
+/* ---------- Absents du jour ---------- */
+
+const DAY_NAMES = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+
+function formatDateLong(iso){
+  const [y,m,d] = iso.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  return `${DAY_NAMES[dt.getDay()]} ${d} ${MONTH_NAMES[m-1]} ${y}`;
+}
+
+function shiftDate(iso, delta){
+  const [y,m,d] = iso.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  dt.setDate(dt.getDate()+delta);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+
+function buildDayReport(date){
+  const jour = DATA.absences[date] || {};
+  const rows = DATA.classes.map(c=>{
+    const rec = jour[c.id] || null;
+    const nameOf = sid => {
+      const s = c.students.find(x=>x.id===sid);
+      return s ? s.name : '(élève retiré de la liste)';
+    };
+    const tri = (a,b)=> a.localeCompare(b,'fr');
+    return {
+      cls: c,
+      taken: rec !== null,
+      absents: rec ? rec.absentIds.map(nameOf).sort(tri) : [],
+      retards: rec && rec.lateIds ? rec.lateIds.map(nameOf).sort(tri) : []
+    };
+  });
+  return {
+    rows,
+    totalAbs: rows.reduce((n,r)=>n+r.absents.length, 0),
+    totalRet: rows.reduce((n,r)=>n+r.retards.length, 0),
+    done: rows.filter(r=>r.taken).length,
+    effectif: DATA.classes.reduce((n,c)=>n+c.students.length, 0)
+  };
+}
+
+function renderJour(){
+  const panel = document.getElementById('panel-jour');
+  if(DATA.classes.length===0){
+    panel.innerHTML = `
+      <h2 class="section-title">Absents du jour</h2>
+      <p class="empty">Ajoutez des classes pour voir apparaître la liste des absents.</p>
+    `;
+    return;
+  }
+
+  const date = ui.jourDate;
+  const rep = buildDayReport(date);
+  const manquants = rep.rows.filter(r=>!r.taken).length;
+
+  panel.innerHTML = `
+    <h2 class="section-title">Absents du jour</h2>
+    <div class="day-nav">
+      <button class="ghost arrow" id="day-prev" title="Jour précédent">◀</button>
+      <input type="date" id="day-date-input" value="${date}">
+      <button class="ghost arrow" id="day-next" title="Jour suivant">▶</button>
+      <button class="ghost" id="day-today">Aujourd'hui</button>
+    </div>
+    <p class="day-title">${formatDateLong(date)}</p>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="label">Absents</div>
+        <div class="value ${rep.totalAbs>0?'rate-high':'rate-ok'}">${rep.totalAbs}</div>
+        <div class="small-note" style="margin:.2rem 0 0;">sur ${rep.effectif} élèves inscrits</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Retards</div>
+        <div class="value">${rep.totalRet}</div>
+        <div class="small-note" style="margin:.2rem 0 0;">non comptés dans les absences</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Appels saisis</div>
+        <div class="value ${manquants>0?'rate-high':'rate-ok'}">${rep.done}/${DATA.classes.length}</div>
+        <div class="small-note" style="margin:.2rem 0 0;">${manquants>0 ? `${manquants} classe${manquants>1?'s':''} en attente` : 'toutes les classes'}</div>
+      </div>
+    </div>
+
+    <div class="day-list">
+      ${rep.rows.map(r=>`
+        <div class="day-row ${r.taken?'':'pending'}">
+          <div class="day-class">${escapeHtml(r.cls.name)}</div>
+          <div class="day-names">
+            ${!r.taken
+              ? '<span class="day-pending">Appel non saisi</span>'
+              : (r.absents.length===0 && r.retards.length===0
+                  ? '<span class="day-ok">Tous présents</span>'
+                  : r.absents.map(n=>`<span class="day-chip">${escapeHtml(n)}</span>`).join('')
+                    + r.retards.map(n=>`<span class="day-chip ret">${escapeHtml(n)} · retard</span>`).join(''))}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="row">
+      <button class="secondary" id="day-print">Imprimer la liste</button>
+      <button class="ghost" id="day-copy">Copier la liste</button>
+    </div>
+    <p class="small-note" id="day-copy-note" style="display:none; margin:.5rem 0 0;"></p>
+  `;
+
+  document.getElementById('day-prev').addEventListener('click', ()=>{
+    ui.jourDate = shiftDate(ui.jourDate, -1);
+    renderJour();
+  });
+  document.getElementById('day-next').addEventListener('click', ()=>{
+    ui.jourDate = shiftDate(ui.jourDate, 1);
+    renderJour();
+  });
+  document.getElementById('day-today').addEventListener('click', ()=>{
+    ui.jourDate = todayISO();
+    renderJour();
+  });
+  document.getElementById('day-date-input').addEventListener('change', e=>{
+    if(e.target.value){ ui.jourDate = e.target.value; renderJour(); }
+  });
+  document.getElementById('day-print').addEventListener('click', ()=> printDayList(ui.jourDate));
+  document.getElementById('day-copy').addEventListener('click', ()=> copyDayList(ui.jourDate));
+}
+
+function dayListAsText(date){
+  const rep = buildDayReport(date);
+  const lignes = [`Absents du ${formatDateLong(date)}`, ''];
+  rep.rows.forEach(r=>{
+    if(!r.taken){ lignes.push(`${r.cls.name} : appel non saisi`); return; }
+    if(r.absents.length===0 && r.retards.length===0){ lignes.push(`${r.cls.name} : tous présents`); return; }
+    let l = `${r.cls.name} : ${r.absents.length ? r.absents.join(', ') : 'aucun absent'}`;
+    if(r.retards.length) l += ` (retards : ${r.retards.join(', ')})`;
+    lignes.push(l);
+  });
+  lignes.push('');
+  lignes.push(`Total : ${rep.totalAbs} absent${rep.totalAbs>1?'s':''} sur ${rep.effectif} élèves${rep.totalRet ? ` · ${rep.totalRet} retard${rep.totalRet>1?'s':''}` : ''}.`);
+  return lignes.join('\n');
+}
+
+async function copyDayList(date){
+  const texte = dayListAsText(date);
+  const note = document.getElementById('day-copy-note');
+  try{
+    await navigator.clipboard.writeText(texte);
+    note.textContent = 'Liste copiée : vous pouvez la coller dans un message ou un courriel.';
+  }catch(err){
+    const ta = document.createElement('textarea');
+    ta.value = texte;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try{ ok = document.execCommand('copy'); }catch(e){ ok = false; }
+    document.body.removeChild(ta);
+    note.textContent = ok
+      ? 'Liste copiée : vous pouvez la coller dans un message ou un courriel.'
+      : "Copie impossible sur cet appareil. Utilisez plutôt le bouton « Imprimer la liste ».";
+  }
+  note.style.display = 'block';
+  setTimeout(()=>{ note.style.display = 'none'; }, 5000);
+}
+
+function printDayList(date){
+  if(DATA.classes.length===0){ alert("Aucune classe à imprimer."); return; }
+  const rep = buildDayReport(date);
+  const lignes = rep.rows.map(r=>{
+    let cellule;
+    if(!r.taken){
+      cellule = '<td class="pday-none" colspan="2">Appel non saisi</td>';
+    }else{
+      const abs = r.absents.length ? escapeHtml(r.absents.join(', ')) : '<span style="color:#9A947F;">Aucun</span>';
+      const ret = r.retards.length ? escapeHtml(r.retards.join(', ')) : '—';
+      cellule = `<td>${abs}</td><td style="width:22%">${ret}</td>`;
+    }
+    return `<tr><td class="pday-cls">${escapeHtml(r.cls.name)}</td>${cellule}</tr>`;
+  }).join('');
+
+  document.getElementById('print-area').innerHTML = `
+    <div class="pheader">
+      <span>Absents du jour &mdash; École Jean Aicard</span>
+      <span>${formatDateLong(date)}</span>
+    </div>
+    <table class="pday">
+      <thead><tr><th>Classe</th><th>Absents</th><th>Retards</th></tr></thead>
+      <tbody>${lignes}</tbody>
+    </table>
+    <p class="pday-foot">${rep.totalAbs} absent${rep.totalAbs>1?'s':''} sur ${rep.effectif} élèves inscrits${rep.totalRet ? ` &middot; ${rep.totalRet} retard${rep.totalRet>1?'s':''}` : ''} &middot; ${rep.done}/${DATA.classes.length} appel${DATA.classes.length>1?'s':''} saisi${rep.done>1?'s':''}.</p>
+  `;
+  setTimeout(()=> window.print(), 60);
+}
+
+/* ---------- Classes ---------- */
 
 function renderClasses(){
   const panel = document.getElementById('panel-classes');
