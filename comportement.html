@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Suivi du comportement — École Jean Aicard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F6F7F6; --surface:#FFFFFF; --ink:#1E2321; --muted:#6B7570; --line:#E1E5E1;
+  --incident:#B23A2E; --incident-bg:#FBEEEC;
+  --positif:#2F6B4F; --positif-bg:#EAF3EE;
+  --mesure:#2E5A8A; --mesure-bg:#EAF0F7;
+  --radius:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:Inter,system-ui,-apple-system,sans-serif; font-size:16px; line-height:1.5;
+  -webkit-text-size-adjust:100%;
+}
+h1,h2,h3{font-family:Fraunces,Georgia,serif; font-weight:600; margin:0; letter-spacing:-.01em}
+button,input,select,textarea{font:inherit; color:inherit}
+a{color:var(--mesure)}
+
+/* ---------- En-tête ---------- */
+header{
+  position:sticky; top:0; z-index:20; background:var(--surface);
+  border-bottom:1px solid var(--line); padding:.7rem 1rem .4rem;
+  padding-top:calc(.7rem + env(safe-area-inset-top));
+}
+.head-row{display:flex; align-items:baseline; justify-content:space-between; gap:1rem}
+header h1{font-size:1.2rem}
+.whoami{font-size:.8rem; color:var(--muted); white-space:nowrap}
+.whoami button{background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;padding:0;font-size:.8rem}
+nav{display:flex; gap:.25rem; margin-top:.6rem; overflow-x:auto; scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{
+  background:none; border:none; border-bottom:2px solid transparent; cursor:pointer;
+  padding:.45rem .6rem; color:var(--muted); font-weight:500; white-space:nowrap;
+}
+nav button[aria-current="true"]{color:var(--ink); border-bottom-color:var(--ink)}
+
+main{max-width:760px; margin:0 auto; padding:1rem 1rem 5rem}
+section[hidden]{display:none}
+
+/* ---------- Blocs ---------- */
+.card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:1rem; margin-bottom:1rem}
+.field{margin-bottom:.85rem}
+label{display:block; font-size:.82rem; color:var(--muted); margin-bottom:.25rem; font-weight:500}
+input[type=text],input[type=date],input[type=password],select,textarea{
+  width:100%; padding:.6rem .7rem; border:1px solid var(--line); border-radius:8px;
+  background:var(--surface);
+}
+textarea{min-height:5rem; resize:vertical}
+select{appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' fill='none' stroke='%236B7570' stroke-width='1.6'/></svg>");
+  background-repeat:no-repeat; background-position:right .7rem center; padding-right:2rem}
+:focus-visible{outline:2px solid var(--mesure); outline-offset:2px}
+
+.row{display:flex; gap:.6rem}
+.row>*{flex:1; min-width:0}
+
+.btn{
+  background:var(--ink); color:#fff; border:none; border-radius:8px;
+  padding:.65rem 1.1rem; font-weight:500; cursor:pointer;
+}
+.btn:disabled{opacity:.45; cursor:default}
+.btn-ghost{background:none; border:1px solid var(--line); color:var(--ink)}
+.btn-sm{padding:.35rem .7rem; font-size:.85rem}
+
+.seg{display:flex; gap:.4rem}
+.seg button{
+  flex:1; padding:.55rem .4rem; border:1px solid var(--line); background:var(--surface);
+  border-radius:8px; cursor:pointer; font-weight:500; font-size:.9rem;
+}
+.seg button[aria-pressed="true"][data-t=incident]{background:var(--incident-bg); border-color:var(--incident); color:var(--incident)}
+.seg button[aria-pressed="true"][data-t=positif]{background:var(--positif-bg); border-color:var(--positif); color:var(--positif)}
+.seg button[aria-pressed="true"][data-t=mesure]{background:var(--mesure-bg); border-color:var(--mesure); color:var(--mesure)}
+
+/* ---------- Observations ---------- */
+.obs{
+  background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--line);
+  border-radius:var(--radius); padding:.75rem .85rem; margin-bottom:.6rem;
+}
+.obs[data-t=incident]{border-left-color:var(--incident)}
+.obs[data-t=positif]{border-left-color:var(--positif)}
+.obs[data-t=mesure]{border-left-color:var(--mesure)}
+.obs-top{display:flex; justify-content:space-between; gap:.6rem; align-items:baseline}
+.obs-who{font-weight:600}
+.obs-meta{font-size:.78rem; color:var(--muted)}
+.obs-cat{font-size:.85rem; margin-top:.15rem}
+.obs[data-t=incident] .obs-cat{color:var(--incident)}
+.obs[data-t=positif] .obs-cat{color:var(--positif)}
+.obs[data-t=mesure] .obs-cat{color:var(--mesure)}
+.obs-txt{margin:.35rem 0 0; white-space:pre-wrap}
+.obs-foot{display:flex; justify-content:space-between; align-items:center; margin-top:.5rem; font-size:.78rem; color:var(--muted)}
+.obs-foot button{background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:.78rem;padding:0}
+.grav{display:inline-block; margin-left:.4rem; font-size:.75rem; color:var(--incident)}
+
+.empty{color:var(--muted); text-align:center; padding:2rem 1rem}
+.empty p{margin:.3rem 0}
+
+/* ---------- Élèves ---------- */
+.eleve-line{display:flex; align-items:center; justify-content:space-between; gap:.6rem; padding:.45rem 0; border-bottom:1px solid var(--line)}
+.eleve-line:last-child{border-bottom:none}
+.eleve-line span{flex:1}
+.count{font-size:.78rem; color:var(--muted)}
+
+/* ---------- Synthèse ---------- */
+.stats{display:flex; gap:.6rem; margin:.8rem 0}
+.stat{flex:1; border:1px solid var(--line); border-radius:8px; padding:.6rem; text-align:center; background:var(--surface)}
+.stat b{display:block; font-family:Fraunces,serif; font-size:1.5rem; line-height:1.2}
+.stat[data-t=incident] b{color:var(--incident)}
+.stat[data-t=positif] b{color:var(--positif)}
+.stat[data-t=mesure] b{color:var(--mesure)}
+.stat span{font-size:.78rem; color:var(--muted)}
+
+/* ---------- Portail ---------- */
+#gate{position:fixed; inset:0; background:var(--bg); z-index:50; display:flex; align-items:center; justify-content:center; padding:1.5rem}
+#gate .card{max-width:340px; width:100%; margin:0}
+#gate h2{font-size:1.35rem; margin-bottom:.2rem}
+#gate p.sub{color:var(--muted); font-size:.88rem; margin:.2rem 0 1.1rem}
+.err{color:var(--incident); font-size:.85rem; margin:.5rem 0 0}
+
+.sync{font-size:.75rem; color:var(--muted); text-align:center; padding:.4rem}
+
+/* ---------- Impression ---------- */
+#print-area{display:none}
+@media print{
+  header,nav,main,#gate{display:none !important}
+  #print-area{display:block; font-size:11pt}
+  #print-area h2{font-size:15pt; margin-bottom:.2rem}
+  #print-area .pr-head{border-bottom:1px solid #000; padding-bottom:.4rem; margin-bottom:.8rem; font-size:9.5pt}
+  #print-area table{width:100%; border-collapse:collapse; margin-top:.5rem}
+  #print-area th,#print-area td{border:1px solid #999; padding:4px 6px; text-align:left; vertical-align:top; font-size:9.5pt}
+  #print-area th{background:#eee}
+  #print-area .sig{margin-top:2rem; font-size:9.5pt}
+}
+</style>
+</head>
+<body>
+
+<!-- ====== Portail d'accès ====== -->
+<div id="gate">
+  <div class="card">
+    <h2>Suivi du comportement</h2>
+    <p class="sub">École élémentaire Jean Aicard</p>
+    <div class="field">
+      <label for="g-code">Code d'accès</label>
+      <input type="password" id="g-code" autocomplete="off" inputmode="text">
+    </div>
+    <div class="field">
+      <label for="g-who">Vous êtes</label>
+      <select id="g-who"></select>
+    </div>
+    <button class="btn" id="g-go" style="width:100%">Ouvrir le cahier</button>
+    <p class="err" id="g-err" hidden>Code incorrect.</p>
+  </div>
+</div>
+
+<header hidden id="app-head">
+  <div class="head-row">
+    <h1>Suivi du comportement</h1>
+    <span class="whoami"><span id="who-name"></span> · <button id="logout">quitter</button></span>
+  </div>
+  <nav>
+    <button data-tab="saisie" aria-current="true">Noter</button>
+    <button data-tab="journal">Journal</button>
+    <button data-tab="synthese">Fiche élève</button>
+    <button data-tab="eleves">Élèves</button>
+  </nav>
+</header>
+
+<main hidden id="app-main">
+
+<!-- ====== Saisie ====== -->
+<section id="tab-saisie">
+  <div class="card">
+    <div class="field">
+      <label>Nature de l'observation</label>
+      <div class="seg" id="type-seg">
+        <button data-t="incident" aria-pressed="true">Incident</button>
+        <button data-t="positif" aria-pressed="false">Positif</button>
+        <button data-t="mesure" aria-pressed="false">Mesure prise</button>
+      </div>
+    </div>
+    <div class="row field">
+      <div>
+        <label for="f-classe">Classe</label>
+        <select id="f-classe"></select>
+      </div>
+      <div>
+        <label for="f-eleve">Élève</label>
+        <select id="f-eleve"></select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="f-cat">Motif</label>
+      <select id="f-cat"></select>
+    </div>
+    <div class="row field" id="wrap-incident">
+      <div>
+        <label for="f-lieu">Lieu</label>
+        <select id="f-lieu"></select>
+      </div>
+      <div>
+        <label for="f-grav">Niveau</label>
+        <select id="f-grav">
+          <option value="1">1 — bénin</option>
+          <option value="2" selected>2 — à signaler</option>
+          <option value="3">3 — grave</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="f-date">Date</label>
+      <input type="date" id="f-date">
+    </div>
+    <div class="field">
+      <label for="f-txt">Description des faits</label>
+      <textarea id="f-txt" placeholder="Faits constatés, en termes factuels."></textarea>
+    </div>
+    <button class="btn" id="f-save" style="width:100%">Enregistrer l'observation</button>
+  </div>
+  <div id="recent"></div>
+</section>
+
+<!-- ====== Journal ====== -->
+<section id="tab-journal" hidden>
+  <div class="card">
+    <div class="row field">
+      <div>
+        <label for="j-classe">Classe</label>
+        <select id="j-classe"></select>
+      </div>
+      <div>
+        <label for="j-type">Nature</label>
+        <select id="j-type">
+          <option value="">Toutes</option>
+          <option value="incident">Incidents</option>
+          <option value="positif">Positifs</option>
+          <option value="mesure">Mesures</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="j-du">Du</label>
+        <input type="date" id="j-du">
+      </div>
+      <div>
+        <label for="j-au">Au</label>
+        <input type="date" id="j-au">
+      </div>
+    </div>
+    <button class="btn btn-ghost btn-sm" id="j-export" style="margin-top:.8rem">Exporter en CSV</button>
+  </div>
+  <div id="journal-list"></div>
+</section>
+
+<!-- ====== Synthèse ====== -->
+<section id="tab-synthese" hidden>
+  <div class="card">
+    <div class="row field">
+      <div>
+        <label for="s-classe">Classe</label>
+        <select id="s-classe"></select>
+      </div>
+      <div>
+        <label for="s-eleve">Élève</label>
+        <select id="s-eleve"></select>
+      </div>
+    </div>
+    <button class="btn btn-ghost btn-sm" id="s-print">Imprimer la fiche</button>
+  </div>
+  <div id="synthese-body"></div>
+</section>
+
+<!-- ====== Élèves ====== -->
+<section id="tab-eleves" hidden>
+  <div class="card">
+    <div class="field">
+      <label for="e-classe">Classe</label>
+      <select id="e-classe"></select>
+    </div>
+    <div class="field">
+      <label for="e-add">Ajouter des élèves — un par ligne, prénom et initiale</label>
+      <textarea id="e-add" placeholder="Lucas M.&#10;Inès B.&#10;Noah T."></textarea>
+    </div>
+    <button class="btn" id="e-save">Ajouter à la classe</button>
+  </div>
+  <div class="card">
+    <h3 style="font-size:1rem; margin-bottom:.4rem" id="e-title">Élèves inscrits</h3>
+    <div id="e-list"></div>
+  </div>
+</section>
+
+</main>
+
+<div class="sync" id="sync">—</div>
+<div id="print-area"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+/* =========================================================
+   Réglages à modifier ici
+   ========================================================= */
+const CODE_ACCES = "aicard2027";           // code communiqué à l'équipe
+const ECOLE = "École élémentaire Jean Aicard — 333 rue du Nouveau Pigeonnier, 83130 La Garde";
+
+const CLASSES = ["CP A","CP B","CP C","CE1 A","CE1 B","CE1-CE2","CE2 A","CE2 B",
+                 "CM1 A","CM1 B","CM1-CM2","CM2 A","CM2 B","ULIS"];
+
+const ADULTES = ["Direction","N. Latrach","A. Seyfried","M. Ostrowski","S. Monjardin",
+  "L. Basolo","B. Comba","N. Grattarola","L. Marolleau","J. Gonzalez","J. Jourdain",
+  "M. Odasso","S. Borgetto","Z. Blaison","B. Dardaine","RASED E","RASED G",
+  "Psychologue","AESH","Autre adulte"];
+
+const MOTIFS = {
+  incident:["Violence physique","Violence verbale, insultes","Attitude irrespectueuse",
+    "Refus de travail","Refus d'obéir à un adulte","Perturbation de la classe",
+    "Non-respect des règles de la cour","Dégradation de matériel","Vol",
+    "Sortie de classe sans autorisation","Mise en danger","Autre"],
+  positif:["Progrès de comportement","Effort soutenu","Entraide, coopération",
+    "Respect des règles","Prise de responsabilité","Réparation assumée",
+    "Retour au calme autonome","Autre"],
+  mesure:["Rappel à la règle","Entretien avec l'élève","Information à la famille",
+    "Rencontre avec la famille","Temps de réparation","Excuses présentées",
+    "Retrait temporaire d'un temps de récréation","Accueil dans une autre classe",
+    "Saisine du RASED","Équipe éducative","PPRE comportement","Protocole de crise déclenché",
+    "Signalement à l'IEN","Autre"]
+};
+
+const LIEUX = ["Classe","Cour de récréation","Couloirs, escaliers","Restauration",
+  "Sanitaires","Gymnase, stade","Sortie scolaire","Périscolaire","Autre"];
+
+/* =========================================================
+   Firebase
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDovrxndeWXBs-ZA_-QQYw6983D5bQ6kgo",
+  authDomain: "sorties-scolaires.firebaseapp.com",
+  projectId: "sorties-scolaires",
+  storageBucket: "sorties-scolaires.appspot.com",
+  messagingSenderId: "690408502155",
+  appId: "1:690408502155:web:d0d5cfc618e64d5028f58e"
+};
+const DOC_ID = "77459b9b941bcb4714d0c121313c900e";
+firebase.initializeApp(firebaseConfig);
+const docRef = firebase.firestore().collection("comportement").doc(DOC_ID);
+
+let state = { eleves: [], obs: [] };
+let suppressNextWrite = false;
+let saveTimer = null;
+let ready = false;
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const sync = m => { $("#sync").textContent = m; };
+
+docRef.onSnapshot(snap => {
+  if (suppressNextWrite) { suppressNextWrite = false; return; }
+  const d = snap.data();
+  if (d) state = { eleves: d.eleves || [], obs: d.obs || [] };
+  ready = true;
+  sync("Synchronisé à " + new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}));
+  renderAll();
+}, err => { sync("Connexion interrompue — les modifications seront envoyées au retour du réseau."); console.error(err); });
+
+function save(){
+  clearTimeout(saveTimer);
+  sync("Enregistrement…");
+  saveTimer = setTimeout(() => {
+    suppressNextWrite = true;
+    docRef.set({ eleves: state.eleves, obs: state.obs, maj: Date.now() })
+      .then(() => sync("Enregistré à " + new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})))
+      .catch(e => { suppressNextWrite = false; sync("Échec de l'enregistrement — vérifiez la connexion."); console.error(e); });
+  }, 400);
+}
+
+/* =========================================================
+   Utilitaires
+   ========================================================= */
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const today = () => new Date().toISOString().slice(0,10);
+const frDate = iso => { const [y,m,d] = iso.split("-"); return `${d}/${m}/${y}`; };
+const LABEL = { incident:"Incident", positif:"Point positif", mesure:"Mesure" };
+
+function fillSelect(sel, items, opts = {}){
+  const keep = sel.value;
+  sel.innerHTML = (opts.placeholder ? `<option value="">${opts.placeholder}</option>` : "")
+    + items.map(i => typeof i === "string"
+        ? `<option value="${esc(i)}">${esc(i)}</option>`
+        : `<option value="${esc(i.v)}">${esc(i.l)}</option>`).join("");
+  if ([...sel.options].some(o => o.value === keep)) sel.value = keep;
+}
+const elevesDe = c => state.eleves.filter(e => e.classe === c)
+  .sort((a,b) => a.nom.localeCompare(b.nom,"fr"));
+const eleveById = id => state.eleves.find(e => e.id === id);
+
+/* =========================================================
+   Portail
+   ========================================================= */
+let moi = localStorage.getItem("ja-comport-moi") || "";
+fillSelect($("#g-who"), ADULTES, { placeholder:"Choisir…" });
+if (moi) $("#g-who").value = moi;
+if (localStorage.getItem("ja-comport-ok") === "1" && moi) openApp();
+
+$("#g-go").onclick = () => {
+  if ($("#g-code").value.trim().toLowerCase() !== CODE_ACCES.toLowerCase()) {
+    $("#g-err").hidden = false; return;
+  }
+  if (!$("#g-who").value) { $("#g-err").textContent = "Indiquez qui saisit."; $("#g-err").hidden = false; return; }
+  moi = $("#g-who").value;
+  localStorage.setItem("ja-comport-ok","1");
+  localStorage.setItem("ja-comport-moi", moi);
+  openApp();
+};
+$("#g-code").addEventListener("keydown", e => { if (e.key === "Enter") $("#g-go").click(); });
+
+function openApp(){
+  $("#gate").hidden = true; $("#gate").style.display = "none";
+  $("#app-head").hidden = false; $("#app-main").hidden = false;
+  $("#who-name").textContent = moi;
+  initApp();
+}
+$("#logout").onclick = () => {
+  localStorage.removeItem("ja-comport-ok");
+  location.reload();
+};
+
+/* =========================================================
+   Navigation
+   ========================================================= */
+$$("nav button").forEach(b => b.onclick = () => {
+  $$("nav button").forEach(x => x.setAttribute("aria-current", x === b));
+  $$("main section").forEach(s => s.hidden = s.id !== "tab-" + b.dataset.tab);
+  renderAll();
+});
+
+/* =========================================================
+   Initialisation des champs
+   ========================================================= */
+let typeCourant = "incident";
+
+function initApp(){
+  [ "#f-classe", "#e-classe" ].forEach(s => fillSelect($(s), CLASSES));
+  fillSelect($("#j-classe"), CLASSES, { placeholder:"Toutes les classes" });
+  fillSelect($("#s-classe"), CLASSES, { placeholder:"Choisir…" });
+  fillSelect($("#f-lieu"), LIEUX);
+  $("#f-date").value = today();
+  majMotifs();
+
+  $$("#type-seg button").forEach(b => b.onclick = () => {
+    typeCourant = b.dataset.t;
+    $$("#type-seg button").forEach(x => x.setAttribute("aria-pressed", x === b));
+    majMotifs();
+  });
+
+  $("#f-classe").onchange = () => majEleves($("#f-classe"), $("#f-eleve"));
+  $("#s-classe").onchange = () => { majEleves($("#s-classe"), $("#s-eleve"), true); renderSynthese(); };
+  $("#s-eleve").onchange = renderSynthese;
+  $("#e-classe").onchange = renderEleves;
+  [ "#j-classe", "#j-type", "#j-du", "#j-au" ].forEach(s => $(s).onchange = renderJournal);
+
+  $("#f-save").onclick = ajouterObs;
+  $("#e-save").onclick = ajouterEleves;
+  $("#j-export").onclick = exportCSV;
+  $("#s-print").onclick = imprimerFiche;
+  renderAll();
+}
+
+function majMotifs(){
+  fillSelect($("#f-cat"), MOTIFS[typeCourant]);
+  $("#wrap-incident").style.display = typeCourant === "incident" ? "flex" : "none";
+}
+function majEleves(selClasse, selEleve, placeholder){
+  const list = elevesDe(selClasse.value).map(e => ({ v:e.id, l:e.nom }));
+  fillSelect(selEleve, list, { placeholder: list.length ? (placeholder ? "Choisir…" : "") : "Aucun élève enregistré" });
+}
+
+/* =========================================================
+   Saisie
+   ========================================================= */
+function ajouterObs(){
+  const eleveId = $("#f-eleve").value;
+  const txt = $("#f-txt").value.trim();
+  if (!eleveId) { alert("Sélectionnez un élève. Ajoutez-le d'abord dans l'onglet Élèves si besoin."); return; }
+  if (!txt) { alert("Décrivez les faits avant d'enregistrer."); return; }
+  state.obs.push({
+    id: uid(), date: $("#f-date").value || today(), eleveId,
+    classe: $("#f-classe").value, type: typeCourant, cat: $("#f-cat").value,
+    lieu: typeCourant === "incident" ? $("#f-lieu").value : "",
+    grav: typeCourant === "incident" ? +$("#f-grav").value : null,
+    txt, auteur: moi, saisi: Date.now()
+  });
+  save();
+  $("#f-txt").value = "";
+  renderAll();
+  window.scrollTo({ top: 0, behavior:"smooth" });
+}
+
+function supprimerObs(id){
+  const o = state.obs.find(x => x.id === id);
+  if (!o) return;
+  if (!confirm("Supprimer définitivement cette observation ?")) return;
+  state.obs = state.obs.filter(x => x.id !== id);
+  save(); renderAll();
+}
+
+function obsHTML(o){
+  const e = eleveById(o.eleveId);
+  return `<article class="obs" data-t="${o.type}">
+    <div class="obs-top">
+      <span class="obs-who">${esc(e ? e.nom : "Élève supprimé")}</span>
+      <span class="obs-meta">${frDate(o.date)} · ${esc(o.classe)}</span>
+    </div>
+    <div class="obs-cat">${esc(o.cat)}${o.lieu ? " · " + esc(o.lieu) : ""}${o.grav === 3 ? '<span class="grav">niveau 3</span>' : ""}</div>
+    <p class="obs-txt">${esc(o.txt)}</p>
+    <div class="obs-foot"><span>${esc(o.auteur)}</span>
+      <button onclick="supprimerObs('${o.id}')">Supprimer</button></div>
+  </article>`;
+}
+
+const triDate = (a,b) => b.date.localeCompare(a.date) || (b.saisi||0) - (a.saisi||0);
+
+function renderRecent(){
+  const l = [...state.obs].sort(triDate).slice(0,5);
+  $("#recent").innerHTML = l.length
+    ? `<h3 style="font-size:.95rem;margin:1.2rem 0 .5rem">Dernières observations</h3>` + l.map(obsHTML).join("")
+    : "";
+}
+
+/* =========================================================
+   Journal
+   ========================================================= */
+function filtrer(){
+  const c = $("#j-classe").value, t = $("#j-type").value,
+        du = $("#j-du").value, au = $("#j-au").value;
+  return state.obs.filter(o =>
+    (!c || o.classe === c) && (!t || o.type === t) &&
+    (!du || o.date >= du) && (!au || o.date <= au)
+  ).sort(triDate);
+}
+function renderJournal(){
+  const l = filtrer();
+  $("#journal-list").innerHTML = l.length ? l.map(obsHTML).join("")
+    : `<div class="empty"><p>Aucune observation pour ces critères.</p></div>`;
+}
+
+function exportCSV(){
+  const l = filtrer();
+  if (!l.length) { alert("Rien à exporter avec ces filtres."); return; }
+  const q = v => '"' + String(v ?? "").replace(/"/g,'""') + '"';
+  const lignes = [["Date","Classe","Élève","Nature","Motif","Lieu","Niveau","Faits","Saisi par"].map(q).join(";")]
+    .concat(l.map(o => [frDate(o.date), o.classe, (eleveById(o.eleveId)||{}).nom || "",
+      LABEL[o.type], o.cat, o.lieu, o.grav || "", o.txt, o.auteur].map(q).join(";")));
+  const blob = new Blob(["\ufeff" + lignes.join("\r\n")], { type:"text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "comportement_" + today() + ".csv";
+  a.click();
+}
+
+/* =========================================================
+   Fiche élève
+   ========================================================= */
+function renderSynthese(){
+  const id = $("#s-eleve").value;
+  const box = $("#synthese-body");
+  if (!id) { box.innerHTML = `<div class="empty"><p>Choisissez une classe puis un élève.</p><p>La fiche rassemble toutes les observations le concernant.</p></div>`; return; }
+  const e = eleveById(id);
+  const l = state.obs.filter(o => o.eleveId === id).sort(triDate);
+  const n = t => l.filter(o => o.type === t).length;
+  box.innerHTML = `
+    <div class="stats">
+      <div class="stat" data-t="incident"><b>${n("incident")}</b><span>incidents</span></div>
+      <div class="stat" data-t="positif"><b>${n("positif")}</b><span>positifs</span></div>
+      <div class="stat" data-t="mesure"><b>${n("mesure")}</b><span>mesures</span></div>
+    </div>
+    ${l.length ? l.map(obsHTML).join("") : `<div class="empty"><p>Aucune observation pour ${esc(e.nom)}.</p></div>`}`;
+}
+
+function imprimerFiche(){
+  const id = $("#s-eleve").value;
+  if (!id) { alert("Choisissez un élève avant d'imprimer."); return; }
+  const e = eleveById(id);
+  const l = state.obs.filter(o => o.eleveId === id).sort((a,b) => a.date.localeCompare(b.date));
+  $("#print-area").innerHTML = `
+    <div class="pr-head">${esc(ECOLE)}</div>
+    <h2>Suivi du comportement — ${esc(e.nom)} (${esc(e.classe)})</h2>
+    <p>Document établi le ${frDate(today())} · ${l.length} observation(s) consignée(s)</p>
+    <table><thead><tr><th>Date</th><th>Nature</th><th>Motif</th><th>Faits constatés</th><th>Saisi par</th></tr></thead>
+    <tbody>${l.map(o => `<tr><td>${frDate(o.date)}</td><td>${LABEL[o.type]}</td>
+      <td>${esc(o.cat)}${o.lieu ? "<br><i>" + esc(o.lieu) + "</i>" : ""}</td>
+      <td>${esc(o.txt)}</td><td>${esc(o.auteur)}</td></tr>`).join("")}</tbody></table>
+    <p class="sig">Document interne à l'école, communicable à la famille sur demande.<br><br>
+    La directrice,</p>`;
+  window.print();
+}
+
+/* =========================================================
+   Élèves
+   ========================================================= */
+function ajouterEleves(){
+  const c = $("#e-classe").value;
+  const lignes = $("#e-add").value.split("\n").map(s => s.trim()).filter(Boolean);
+  if (!lignes.length) { alert("Saisissez au moins un nom."); return; }
+  let ajoutes = 0;
+  lignes.forEach(nom => {
+    if (state.eleves.some(e => e.classe === c && e.nom.toLowerCase() === nom.toLowerCase())) return;
+    state.eleves.push({ id: uid(), nom, classe: c });
+    ajoutes++;
+  });
+  $("#e-add").value = "";
+  save(); renderAll();
+  sync(ajoutes + " élève(s) ajouté(s) en " + c);
+}
+
+function supprimerEleve(id){
+  const e = eleveById(id);
+  const n = state.obs.filter(o => o.eleveId === id).length;
+  if (!confirm(`Retirer ${e.nom} de la liste ?` + (n ? `\n${n} observation(s) le concernant seront également supprimées.` : ""))) return;
+  state.eleves = state.eleves.filter(x => x.id !== id);
+  state.obs = state.obs.filter(o => o.eleveId !== id);
+  save(); renderAll();
+}
+
+function renderEleves(){
+  const c = $("#e-classe").value;
+  const l = elevesDe(c);
+  $("#e-title").textContent = `${c} — ${l.length} élève(s)`;
+  $("#e-list").innerHTML = l.length ? l.map(e => {
+    const n = state.obs.filter(o => o.eleveId === e.id).length;
+    return `<div class="eleve-line"><span>${esc(e.nom)}</span>
+      <span class="count">${n} obs.</span>
+      <button class="btn btn-ghost btn-sm" onclick="supprimerEleve('${e.id}')">Retirer</button></div>`;
+  }).join("") : `<div class="empty"><p>Aucun élève dans cette classe.</p><p>Collez la liste ci-dessus pour la constituer.</p></div>`;
+}
+
+/* =========================================================
+   Rendu global
+   ========================================================= */
+function renderAll(){
+  if (!ready) return;
+  majEleves($("#f-classe"), $("#f-eleve"));
+  majEleves($("#s-classe"), $("#s-eleve"), true);
+  renderRecent(); renderJournal(); renderSynthese(); renderEleves();
+}
+</script>
+</body>
+</html>
