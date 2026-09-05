@@ -137,6 +137,7 @@ body{
 .record.rec-appel .tab{ background:var(--ciel); }
 .record.rec-sorties .tab{ background:var(--forest); }
 .record.rec-demandes .tab{ background:var(--terracotta); }
+.record.rec-comportement .tab{ background:var(--lilas); }
 
 .record .stripe{
   position:absolute;
@@ -147,6 +148,7 @@ body{
 .record.rec-appel .stripe{ background:var(--terracotta); }
 .record.rec-sorties .stripe{ background:var(--gold); }
 .record.rec-demandes .stripe{ background:var(--lilas); }
+.record.rec-comportement .stripe{ background:var(--forest); }
 
 .record h2{
   font-family:'Fraunces',serif;
@@ -171,6 +173,7 @@ body{
 .record.rec-appel .go{ color:var(--ink); }
 .record.rec-sorties .go{ color:var(--menthe-fonce); }
 .record.rec-demandes .go{ color:var(--corail-fonce); }
+.record.rec-comportement .go{ color:var(--prune); }
 .record .go .arrow{ transition:transform .15s ease; }
 .record:hover .go .arrow{ transform:translateX(3px); }
 
@@ -269,6 +272,19 @@ body{
         <div class="meta-row">
           <span class="tag">Échéances</span>
           <span class="tag">Synchronisé</span>
+          <span class="tag">Export CSV</span>
+        </div>
+      </a>
+
+      <a class="record rec-comportement" href="./comportement.html">
+        <span class="stripe"></span>
+        <span class="tab">Au besoin</span>
+        <h2>Suivi du comportement</h2>
+        <p class="desc">Consignez incidents, points positifs et mesures prises, puis éditez la fiche de suivi d'un élève.</p>
+        <span class="go">Ouvrir le registre <span class="arrow">→</span></span>
+        <div class="meta-row">
+          <span class="tag">Code d'accès</span>
+          <span class="tag">Fiche élève</span>
           <span class="tag">Export CSV</span>
         </div>
       </a>
