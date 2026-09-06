@@ -217,6 +217,49 @@ label{display:block;font-size:12px;letter-spacing:.09em;text-transform:uppercase
 </style>
 </head>
 <body>
+<!-- ================= Accès réservé — portail de connexion ================= -->
+<style>
+body:not(.ed-ready) > *:not(#ed-gate){display:none !important}
+body:not(.ed-ready){overflow:hidden}
+#ed-gate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;
+  background:#F6F3FB;padding:1.2rem;
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif}
+#ed-gate .ed-box{background:#fff;border:1px solid #E7E0F2;border-radius:16px;padding:1.8rem 1.6rem;
+  width:100%;max-width:390px;box-shadow:0 18px 48px rgba(69,59,98,.14)}
+#ed-gate h2{margin:0 0 .25rem;font-size:1.2rem;font-weight:600;color:#453B62}
+#ed-gate .ed-sub{margin:0 0 1.35rem;font-size:.85rem;line-height:1.45;color:#7A719A}
+#ed-gate label{display:block;font-size:.79rem;font-weight:600;color:#453B62;margin:0 0 .3rem}
+#ed-gate input{width:100%;box-sizing:border-box;padding:.62rem .7rem;border:1px solid #D9D0EC;
+  border-radius:9px;font-size:.95rem;font-family:inherit;color:#453B62;background:#fff;margin:0 0 .9rem}
+#ed-gate input:focus{outline:2px solid #B7A6E0;outline-offset:1px;border-color:#B7A6E0}
+#ed-gate #ed-go{width:100%;padding:.72rem;border:0;border-radius:9px;background:#8A6BB8;color:#fff;
+  font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer}
+#ed-gate #ed-go:disabled{opacity:.55;cursor:default}
+#ed-gate .ed-err{margin:.85rem 0 0;font-size:.83rem;line-height:1.4;color:#C2624B;min-height:1.1rem}
+#ed-gate .ed-forgot{margin:.9rem 0 0;text-align:center}
+#ed-gate .ed-forgot button{background:none;border:0;color:#8A6BB8;text-decoration:underline;
+  cursor:pointer;font-family:inherit;font-size:.78rem;padding:0}
+#ed-out{position:fixed;left:10px;bottom:10px;z-index:9998;background:#fff;border:1px solid #E7E0F2;
+  border-radius:999px;padding:.34rem .72rem;color:#7A719A;cursor:pointer;
+  font:500 12px/1 'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  box-shadow:0 2px 8px rgba(69,59,98,.10)}
+@media print{#ed-out{display:none !important}}
+</style>
+<div id="ed-gate">
+  <div class="ed-box">
+    <h2>Espace direction</h2>
+    <p class="ed-sub">École élémentaire Jean Aicard — accès réservé aux comptes autorisés.</p>
+    <label for="ed-mail">Adresse électronique</label>
+    <input type="email" id="ed-mail" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false">
+    <label for="ed-pass">Mot de passe</label>
+    <input type="password" id="ed-pass" autocomplete="current-password">
+    <button id="ed-go" type="button">Se connecter</button>
+    <p class="ed-err" id="ed-err"></p>
+    <p class="ed-forgot"><button id="ed-forgot" type="button">Mot de passe oublié</button></p>
+  </div>
+</div>
+<!-- ======================================================================= -->
+
 
 <header>
   <div class="hd-inner">
@@ -394,13 +437,94 @@ const localStore = {
   remove(id){ const a=this.read().filter(t=>t.id!==id); taches=a; this.write(a); }
 };
 
+/* =========================================================================
+   ACCÈS RÉSERVÉ — authentification Firebase par compte nominatif.
+   Rien n'est demandé à Firestore tant que la connexion n'est pas établie.
+   Les comptes sont créés exclusivement depuis la console Firebase.
+   ========================================================================= */
+const ED_MSG = {
+  'auth/invalid-email'          : "Adresse électronique invalide.",
+  'auth/user-not-found'         : "Aucun compte ne correspond à cette adresse.",
+  'auth/wrong-password'         : "Mot de passe incorrect.",
+  'auth/invalid-credential'     : "Adresse ou mot de passe incorrect.",
+  'auth/user-disabled'          : "Ce compte a été désactivé.",
+  'auth/too-many-requests'      : "Trop de tentatives. Réessayez dans quelques minutes.",
+  'auth/network-request-failed' : "Réseau indisponible. Vérifiez la connexion."
+};
+
+async function edOuvrirSession(auth, A){
+  try{ await A.setPersistence(auth, A.browserLocalPersistence); }catch(e){ /* mode privé */ }
+  return new Promise(resolve => {
+    const gate = document.getElementById('ed-gate');
+    const err  = document.getElementById('ed-err');
+    const btn  = document.getElementById('ed-go');
+    const mail = document.getElementById('ed-mail');
+    const pass = document.getElementById('ed-pass');
+    let ouvert = false;
+
+    function ouvrir(u){
+      if(ouvert) return;
+      ouvert = true;
+      gate.remove();
+      document.body.classList.add('ed-ready');
+      const out = document.createElement('button');
+      out.id = 'ed-out';
+      out.type = 'button';
+      out.textContent = 'Se déconnecter';
+      out.title = u.email || '';
+      out.addEventListener('click', () => A.signOut(auth).then(() => location.reload()));
+      document.body.appendChild(out);
+      resolve(u);
+    }
+
+    A.onAuthStateChanged(auth, u => { if(u) ouvrir(u); });
+
+    async function connecter(){
+      err.style.color = ''; err.textContent = '';
+      if(!mail.value.trim() || !pass.value){
+        err.textContent = "Renseignez votre adresse et votre mot de passe."; return;
+      }
+      btn.disabled = true;
+      try{
+        await A.signInWithEmailAndPassword(auth, mail.value.trim(), pass.value);
+      }catch(e){
+        err.textContent = ED_MSG[e.code] || "Connexion impossible.";
+        btn.disabled = false;
+      }
+    }
+    btn.addEventListener('click', connecter);
+    [mail, pass].forEach(el => el.addEventListener('keydown', e => {
+      if(e.key === 'Enter') connecter();
+    }));
+
+    document.getElementById('ed-forgot').addEventListener('click', async () => {
+      const adresse = mail.value.trim();
+      if(!adresse){ err.style.color=''; err.textContent = "Indiquez d'abord votre adresse électronique."; return; }
+      try{
+        await A.sendPasswordResetEmail(auth, adresse);
+        err.style.color = '#3E9080';
+        err.textContent = "Message de réinitialisation envoyé.";
+      }catch(e){
+        err.style.color = '';
+        err.textContent = ED_MSG[e.code] || "Envoi impossible.";
+      }
+    });
+  });
+}
+
 async function initFirebase(){
-  const [{initializeApp},{getAuth,signInAnonymously,onAuthStateChanged},fs] = await Promise.all([
+  const [{initializeApp}, A, fs] = await Promise.all([
     import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"),
     import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"),
     import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js")
   ]);
-  const app = initializeApp(firebaseConfig);
+  const app  = initializeApp(firebaseConfig);
+  const auth = A.getAuth(app);
+
+  // Tant que la connexion n'est pas faite, la fonction ne va pas plus loin :
+  // aucune lecture, aucune écriture.
+  await edOuvrirSession(auth, A);
+
   const db  = fs.getFirestore(app);
 
   // Mémoire hors ligne : les demandes déjà connues restent consultables sans
@@ -410,14 +534,6 @@ async function initFirebase(){
   catch(e){ console.warn("Persistance hors ligne indisponible (plusieurs onglets ouverts ?)", e); }
 
   const col = fs.collection(db, COLLECTION);
-
-  // Hors ligne, on réutilise la session déjà enregistrée sur l'appareil au lieu
-  // de demander une nouvelle connexion (qui échouerait faute de réseau).
-  const auth = getAuth(app);
-  const sessionExistante = await new Promise(res => {
-    const stop = onAuthStateChanged(auth, u => { stop(); res(u); }, () => res(null));
-  });
-  if(!sessionExistante) await signInAnonymously(auth);
 
   store = {
     start(){

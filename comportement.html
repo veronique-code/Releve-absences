@@ -142,6 +142,49 @@ select{appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns
 </style>
 </head>
 <body>
+<!-- ================= Accès réservé — portail de connexion ================= -->
+<style>
+body:not(.ed-ready) > *:not(#ed-gate){display:none !important}
+body:not(.ed-ready){overflow:hidden}
+#ed-gate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;
+  background:#F6F3FB;padding:1.2rem;
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif}
+#ed-gate .ed-box{background:#fff;border:1px solid #E7E0F2;border-radius:16px;padding:1.8rem 1.6rem;
+  width:100%;max-width:390px;box-shadow:0 18px 48px rgba(69,59,98,.14)}
+#ed-gate h2{margin:0 0 .25rem;font-size:1.2rem;font-weight:600;color:#453B62}
+#ed-gate .ed-sub{margin:0 0 1.35rem;font-size:.85rem;line-height:1.45;color:#7A719A}
+#ed-gate label{display:block;font-size:.79rem;font-weight:600;color:#453B62;margin:0 0 .3rem}
+#ed-gate input{width:100%;box-sizing:border-box;padding:.62rem .7rem;border:1px solid #D9D0EC;
+  border-radius:9px;font-size:.95rem;font-family:inherit;color:#453B62;background:#fff;margin:0 0 .9rem}
+#ed-gate input:focus{outline:2px solid #B7A6E0;outline-offset:1px;border-color:#B7A6E0}
+#ed-gate #ed-go{width:100%;padding:.72rem;border:0;border-radius:9px;background:#8A6BB8;color:#fff;
+  font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer}
+#ed-gate #ed-go:disabled{opacity:.55;cursor:default}
+#ed-gate .ed-err{margin:.85rem 0 0;font-size:.83rem;line-height:1.4;color:#C2624B;min-height:1.1rem}
+#ed-gate .ed-forgot{margin:.9rem 0 0;text-align:center}
+#ed-gate .ed-forgot button{background:none;border:0;color:#8A6BB8;text-decoration:underline;
+  cursor:pointer;font-family:inherit;font-size:.78rem;padding:0}
+#ed-out{position:fixed;left:10px;bottom:10px;z-index:9998;background:#fff;border:1px solid #E7E0F2;
+  border-radius:999px;padding:.34rem .72rem;color:#7A719A;cursor:pointer;
+  font:500 12px/1 'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  box-shadow:0 2px 8px rgba(69,59,98,.10)}
+@media print{#ed-out{display:none !important}}
+</style>
+<div id="ed-gate">
+  <div class="ed-box">
+    <h2>Espace direction</h2>
+    <p class="ed-sub">École élémentaire Jean Aicard — accès réservé aux comptes autorisés.</p>
+    <label for="ed-mail">Adresse électronique</label>
+    <input type="email" id="ed-mail" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false">
+    <label for="ed-pass">Mot de passe</label>
+    <input type="password" id="ed-pass" autocomplete="current-password">
+    <button id="ed-go" type="button">Se connecter</button>
+    <p class="ed-err" id="ed-err"></p>
+    <p class="ed-forgot"><button id="ed-forgot" type="button">Mot de passe oublié</button></p>
+  </div>
+</div>
+<!-- ======================================================================= -->
+
 
 <!-- ====== Portail d'accès ====== -->
 <div id="gate">
@@ -149,15 +192,11 @@ select{appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns
     <h2>Suivi du comportement</h2>
     <p class="sub">École élémentaire Jean Aicard</p>
     <div class="field">
-      <label for="g-code">Code d'accès</label>
-      <input type="password" id="g-code" autocomplete="off" inputmode="text">
-    </div>
-    <div class="field">
       <label for="g-who">Vous êtes</label>
       <select id="g-who"></select>
     </div>
     <button class="btn" id="g-go" style="width:100%">Ouvrir le cahier</button>
-    <p class="err" id="g-err" hidden>Code incorrect.</p>
+    <p class="err" id="g-err" hidden></p>
   </div>
 </div>
 
@@ -304,12 +343,12 @@ select{appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns
 <div id="print-area"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
 /* =========================================================
    Réglages à modifier ici
    ========================================================= */
-const CODE_ACCES = "aicard2027";           // code communiqué à l'équipe
 const ECOLE = "École élémentaire Jean Aicard — 333 rue du Nouveau Pigeonnier, 83130 La Garde";
 
 const CLASSES = ["CP A","CP B","CP C","CE1 A","CE1 B","CE1-CE2","CE2 A","CE2 B",
@@ -345,7 +384,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDovrxndeWXBs-ZA_-QQYw6983D5bQ6kgo",
   authDomain: "sorties-scolaires.firebaseapp.com",
   projectId: "sorties-scolaires",
-  storageBucket: "sorties-scolaires.appspot.com",
+  storageBucket: "sorties-scolaires.firebasestorage.app",
   messagingSenderId: "690408502155",
   appId: "1:690408502155:web:d0d5cfc618e64d5028f58e"
 };
@@ -362,6 +401,7 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const sync = m => { $("#sync").textContent = m; };
 
+function edDemarrerSync(){
 docRef.onSnapshot(snap => {
   if (suppressNextWrite) { suppressNextWrite = false; return; }
   const d = snap.data();
@@ -370,6 +410,7 @@ docRef.onSnapshot(snap => {
   sync("Synchronisé à " + new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}));
   renderAll();
 }, err => { sync("Connexion interrompue — les modifications seront envoyées au retour du réseau."); console.error(err); });
+}
 
 function save(){
   clearTimeout(saveTimer);
@@ -404,24 +445,90 @@ const elevesDe = c => state.eleves.filter(e => e.classe === c)
 const eleveById = id => state.eleves.find(e => e.id === id);
 
 /* =========================================================
-   Portail
+   Accès réservé — authentification Firebase
+   Aucune donnée n'est lue tant que la connexion n'est pas établie.
+   Les comptes sont créés exclusivement depuis la console Firebase.
    ========================================================= */
+const ED_MSG = {
+  'auth/invalid-email'          : "Adresse électronique invalide.",
+  'auth/user-not-found'         : "Aucun compte ne correspond à cette adresse.",
+  'auth/wrong-password'         : "Mot de passe incorrect.",
+  'auth/invalid-credential'     : "Adresse ou mot de passe incorrect.",
+  'auth/user-disabled'          : "Ce compte a été désactivé.",
+  'auth/too-many-requests'      : "Trop de tentatives. Réessayez dans quelques minutes.",
+  'auth/network-request-failed' : "Réseau indisponible. Vérifiez la connexion."
+};
+
+(function edPortail(){
+  const gate = document.getElementById('ed-gate');
+  const err  = document.getElementById('ed-err');
+  const btn  = document.getElementById('ed-go');
+  const mail = document.getElementById('ed-mail');
+  const pass = document.getElementById('ed-pass');
+  const auth = firebase.auth();
+  let ouvert = false;
+
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+
+  function ouvrir(u){
+    if (ouvert) return;
+    ouvert = true;
+    gate.remove();
+    document.body.classList.add('ed-ready');
+    const out = document.createElement('button');
+    out.id = 'ed-out';
+    out.type = 'button';
+    out.textContent = 'Se déconnecter';
+    out.title = u.email || '';
+    out.addEventListener('click', () => auth.signOut().then(() => location.reload()));
+    document.body.appendChild(out);
+    edDemarrerSync();
+    if (moi) openApp();
+  }
+
+  auth.onAuthStateChanged(u => { if (u) ouvrir(u); });
+
+  function connecter(){
+    err.style.color = ''; err.textContent = '';
+    if (!mail.value.trim() || !pass.value){
+      err.textContent = "Renseignez votre adresse et votre mot de passe."; return;
+    }
+    btn.disabled = true;
+    auth.signInWithEmailAndPassword(mail.value.trim(), pass.value)
+      .catch(e => { err.textContent = ED_MSG[e.code] || "Connexion impossible."; btn.disabled = false; });
+  }
+  btn.addEventListener('click', connecter);
+  [mail, pass].forEach(el => el.addEventListener('keydown', e => {
+    if (e.key === 'Enter') connecter();
+  }));
+
+  document.getElementById('ed-forgot').addEventListener('click', () => {
+    const adresse = mail.value.trim();
+    if (!adresse){ err.style.color=''; err.textContent = "Indiquez d'abord votre adresse électronique."; return; }
+    auth.sendPasswordResetEmail(adresse)
+      .then(() => { err.style.color = '#3E9080'; err.textContent = "Message de réinitialisation envoyé."; })
+      .catch(e => { err.style.color = ''; err.textContent = ED_MSG[e.code] || "Envoi impossible."; });
+  });
+})();
+
+/* =========================================================
+   Portail « Vous êtes »
+   ========================================================= */
+/* Le contrôle d'accès est assuré par l'authentification Firebase (portail
+   #ed-gate ci-dessus). Ce second écran ne sert plus qu'à savoir quel adulte
+   saisit l'observation ; il ne protège rien. */
 let moi = localStorage.getItem("ja-comport-moi") || "";
 fillSelect($("#g-who"), ADULTES, { placeholder:"Choisir…" });
 if (moi) $("#g-who").value = moi;
-if (localStorage.getItem("ja-comport-ok") === "1" && moi) openApp();
 
 $("#g-go").onclick = () => {
-  if ($("#g-code").value.trim().toLowerCase() !== CODE_ACCES.toLowerCase()) {
-    $("#g-err").hidden = false; return;
+  if (!$("#g-who").value) {
+    $("#g-err").textContent = "Indiquez qui saisit."; $("#g-err").hidden = false; return;
   }
-  if (!$("#g-who").value) { $("#g-err").textContent = "Indiquez qui saisit."; $("#g-err").hidden = false; return; }
   moi = $("#g-who").value;
-  localStorage.setItem("ja-comport-ok","1");
   localStorage.setItem("ja-comport-moi", moi);
   openApp();
 };
-$("#g-code").addEventListener("keydown", e => { if (e.key === "Enter") $("#g-go").click(); });
 
 function openApp(){
   $("#gate").hidden = true; $("#gate").style.display = "none";
@@ -430,8 +537,7 @@ function openApp(){
   initApp();
 }
 $("#logout").onclick = () => {
-  localStorage.removeItem("ja-comport-ok");
-  location.reload();
+  firebase.auth().signOut().then(() => location.reload());
 };
 
 /* =========================================================
