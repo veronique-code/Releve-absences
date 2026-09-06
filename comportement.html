@@ -486,7 +486,13 @@ const ED_MSG = {
     if (moi) openApp();
   }
 
-  auth.onAuthStateChanged(u => { if (u) ouvrir(u); });
+  // Seule une session ouverte par adresse et mot de passe donne accès.
+    // Une session anonyme héritée des versions précédentes est refermée.
+  auth.onAuthStateChanged(u => {
+    if (!u) return;
+    if (u.isAnonymous) auth.signOut().catch(() => {});
+    else ouvrir(u);
+  });
 
   function connecter(){
     err.style.color = ''; err.textContent = '';

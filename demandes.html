@@ -477,7 +477,13 @@ async function edOuvrirSession(auth, A){
       resolve(u);
     }
 
-    A.onAuthStateChanged(auth, u => { if(u) ouvrir(u); });
+    // Seule une session ouverte par adresse et mot de passe donne accès.
+    // Une session anonyme héritée des versions précédentes est refermée.
+    A.onAuthStateChanged(auth, u => {
+      if(!u) return;
+      if(u.isAnonymous) A.signOut(auth).catch(()=>{});
+      else ouvrir(u);
+    });
 
     async function connecter(){
       err.style.color = ''; err.textContent = '';

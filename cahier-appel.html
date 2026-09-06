@@ -800,7 +800,13 @@ async function edOuvrirSession(auth){
       resolve(u);
     }
 
-    onAuthStateChanged(auth, u => { if(u) ouvrir(u); });
+    // Seule une session ouverte par adresse et mot de passe donne accès.
+    // Une session anonyme héritée des versions précédentes est refermée.
+    onAuthStateChanged(auth, u => {
+      if(!u) return;
+      if(u.isAnonymous) signOut(auth).catch(()=>{});
+      else ouvrir(u);
+    });
 
     async function connecter(){
       err.style.color = '';
