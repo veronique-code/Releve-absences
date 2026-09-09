@@ -243,8 +243,8 @@ body:not(.ed-ready){overflow:hidden}
 #ed-gate #ed-go{width:100%;padding:.72rem;border:0;border-radius:9px;background:#8A6BB8;color:#fff;
   font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer}
 #ed-gate #ed-go:disabled{opacity:.55;cursor:default}
-#ed-gate #ed-google{width:100%;box-sizing:border-box;padding:.7rem;border:1px solid #D9D0EC;border-radius:9px;
-  background:#fff;color:#453B62;font:600 .93rem/1 'Inter',system-ui,-apple-system,sans-serif;cursor:pointer;
+#ed-gate #ed-google{width:100%;box-sizing:border-box;margin-top:.4rem;padding:.78rem;border:0;border-radius:9px;
+  background:#8A6BB8;color:#fff;font:600 .95rem/1 'Inter',system-ui,-apple-system,sans-serif;cursor:pointer;
   display:flex;align-items:center;justify-content:center;gap:.5rem}
 #ed-gate #ed-google:disabled{opacity:.55;cursor:default}
 #ed-gate .ed-ou{display:flex;align-items:center;gap:.6rem;margin:1rem 0 1.1rem;font-size:.78rem;color:#9A92B4}
@@ -257,25 +257,14 @@ body:not(.ed-ready){overflow:hidden}
   border-radius:999px;padding:.34rem .72rem;color:#7A719A;cursor:pointer;
   font:500 12px/1 'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
   box-shadow:0 2px 8px rgba(69,59,98,.10)}
-#ed-uid{position:fixed;left:10px;bottom:46px;z-index:9998;background:#fff;border:1px solid #E7E0F2;
-  border-radius:999px;padding:.34rem .72rem;color:#8A6BB8;cursor:pointer;
-  font:600 12px/1 'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
-  box-shadow:0 2px 8px rgba(69,59,98,.10)}
-@media print{#ed-out,#ed-uid{display:none !important}}
+@media print{#ed-out{display:none !important}}
 </style>
 <div id="ed-gate">
   <div class="ed-box">
     <h2>Espace direction</h2>
     <p class="ed-sub">École élémentaire Jean Aicard — accès réservé aux comptes autorisés.</p>
     <button id="ed-google" type="button">Se connecter avec Google</button>
-    <p class="ed-ou"><span>ou</span></p>
-    <label for="ed-mail">Adresse électronique</label>
-    <input type="email" id="ed-mail" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false">
-    <label for="ed-pass">Mot de passe</label>
-    <input type="password" id="ed-pass" autocomplete="current-password">
-    <button id="ed-go" type="button">Se connecter</button>
     <p class="ed-err" id="ed-err"></p>
-    <p class="ed-forgot"><button id="ed-forgot" type="button">Mot de passe oublié</button></p>
   </div>
 </div>
 <!-- ======================================================================= -->
@@ -352,8 +341,8 @@ body:not(.ed-ready){overflow:hidden}
 </div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut,
-         sendPasswordResetEmail, setPersistence, browserLocalPersistence,
+import { getAuth, onAuthStateChanged, signOut,
+         setPersistence, browserLocalPersistence,
          GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult }
   from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
@@ -384,9 +373,6 @@ try{ await setPersistence(auth, browserLocalPersistence); }catch(e){ /* mode pri
 await new Promise(resolve => {
   const gate = document.getElementById('ed-gate');
   const err  = document.getElementById('ed-err');
-  const btn  = document.getElementById('ed-go');
-  const mail = document.getElementById('ed-mail');
-  const pass = document.getElementById('ed-pass');
   let ouvert = false;
 
   function ouvrir(u){
@@ -401,17 +387,6 @@ await new Promise(resolve => {
     out.title = u.email || '';
     out.addEventListener('click', () => signOut(auth).then(() => location.reload()));
     document.body.appendChild(out);
-
-    // Bouton provisoire : affiche l'identifiant du compte connecté (UID),
-    // à recopier dans les règles Firestore. À retirer une fois la bascule faite.
-    const idb = document.createElement('button');
-    idb.id = 'ed-uid'; idb.type = 'button'; idb.textContent = 'Mon UID';
-    idb.title = 'Afficher et copier mon identifiant Firebase';
-    idb.addEventListener('click', () => {
-      try{ navigator.clipboard.writeText(u.uid); }catch(e){}
-      window.prompt("Identifiant du compte connecté (UID) — copiez-le :", u.uid);
-    });
-    document.body.appendChild(idb);
     resolve(u);
   }
 
@@ -422,20 +397,6 @@ await new Promise(resolve => {
     if(u.isAnonymous) signOut(auth).catch(()=>{});
     else ouvrir(u);
   });
-
-  async function connecter(){
-    err.style.color = ''; err.textContent = '';
-    if(!mail.value.trim() || !pass.value){
-      err.textContent = "Renseignez votre adresse et votre mot de passe."; return;
-    }
-    btn.disabled = true;
-    try{ await signInWithEmailAndPassword(auth, mail.value.trim(), pass.value); }
-    catch(e){ err.textContent = ED_MSG[e.code] || "Connexion impossible."; btn.disabled = false; }
-  }
-  btn.addEventListener('click', connecter);
-  [mail, pass].forEach(el => el.addEventListener('keydown', e => {
-    if(e.key === 'Enter') connecter();
-  }));
 
   /* --- Connexion Google (fenêtre, repli sur redirection) ------------------ */
   const gbtn = document.getElementById('ed-google');
@@ -453,21 +414,7 @@ await new Promise(resolve => {
       catch(e2){ err.textContent = (ED_MSG[e2.code] || "Connexion Google impossible.") + " [" + e2.code + "]"; }
       gbtn.disabled = false;
     }
-  });
-
-  document.getElementById('ed-forgot').addEventListener('click', async () => {
-    const adresse = mail.value.trim();
-    if(!adresse){ err.style.color=''; err.textContent = "Indiquez d'abord votre adresse électronique."; return; }
-    try{
-      await sendPasswordResetEmail(auth, adresse);
-      err.style.color = '#3E9080';
-      err.textContent = "Message de réinitialisation envoyé.";
-    }catch(e){
-      err.style.color = '';
-      err.textContent = ED_MSG[e.code] || "Envoi impossible.";
-    }
-  });
-});
+  });});
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{

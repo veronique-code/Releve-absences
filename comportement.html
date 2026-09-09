@@ -160,8 +160,8 @@ body:not(.ed-ready){overflow:hidden}
 #ed-gate #ed-go{width:100%;padding:.72rem;border:0;border-radius:9px;background:#8A6BB8;color:#fff;
   font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer}
 #ed-gate #ed-go:disabled{opacity:.55;cursor:default}
-#ed-gate #ed-google{width:100%;box-sizing:border-box;padding:.7rem;border:1px solid #D9D0EC;border-radius:9px;
-  background:#fff;color:#453B62;font:600 .93rem/1 'Inter',system-ui,-apple-system,sans-serif;cursor:pointer;
+#ed-gate #ed-google{width:100%;box-sizing:border-box;margin-top:.4rem;padding:.78rem;border:0;border-radius:9px;
+  background:#8A6BB8;color:#fff;font:600 .95rem/1 'Inter',system-ui,-apple-system,sans-serif;cursor:pointer;
   display:flex;align-items:center;justify-content:center;gap:.5rem}
 #ed-gate #ed-google:disabled{opacity:.55;cursor:default}
 #ed-gate .ed-ou{display:flex;align-items:center;gap:.6rem;margin:1rem 0 1.1rem;font-size:.78rem;color:#9A92B4}
@@ -181,14 +181,7 @@ body:not(.ed-ready){overflow:hidden}
     <h2>Espace direction</h2>
     <p class="ed-sub">École élémentaire Jean Aicard — accès réservé aux comptes autorisés.</p>
     <button id="ed-google" type="button">Se connecter avec Google</button>
-    <p class="ed-ou"><span>ou</span></p>
-    <label for="ed-mail">Adresse électronique</label>
-    <input type="email" id="ed-mail" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false">
-    <label for="ed-pass">Mot de passe</label>
-    <input type="password" id="ed-pass" autocomplete="current-password">
-    <button id="ed-go" type="button">Se connecter</button>
     <p class="ed-err" id="ed-err"></p>
-    <p class="ed-forgot"><button id="ed-forgot" type="button">Mot de passe oublié</button></p>
   </div>
 </div>
 <!-- ======================================================================= -->
@@ -472,9 +465,6 @@ const ED_MSG = {
 (function edPortail(){
   const gate = document.getElementById('ed-gate');
   const err  = document.getElementById('ed-err');
-  const btn  = document.getElementById('ed-go');
-  const mail = document.getElementById('ed-mail');
-  const pass = document.getElementById('ed-pass');
   const auth = firebase.auth();
   let ouvert = false;
 
@@ -504,20 +494,6 @@ const ED_MSG = {
     else ouvrir(u);
   });
 
-  function connecter(){
-    err.style.color = ''; err.textContent = '';
-    if (!mail.value.trim() || !pass.value){
-      err.textContent = "Renseignez votre adresse et votre mot de passe."; return;
-    }
-    btn.disabled = true;
-    auth.signInWithEmailAndPassword(mail.value.trim(), pass.value)
-      .catch(e => { err.textContent = ED_MSG[e.code] || "Connexion impossible."; btn.disabled = false; });
-  }
-  btn.addEventListener('click', connecter);
-  [mail, pass].forEach(el => el.addEventListener('keydown', e => {
-    if (e.key === 'Enter') connecter();
-  }));
-
   /* --- Connexion Google (fenêtre, repli sur redirection) ------------------ */
   const gbtn = document.getElementById('ed-google');
   auth.getRedirectResult().catch(e => { err.textContent = (ED_MSG[e.code] || "Connexion Google impossible.") + " [" + e.code + "]"; });
@@ -534,16 +510,7 @@ const ED_MSG = {
       catch(e2){ err.textContent = (ED_MSG[e2.code] || "Connexion Google impossible.") + " [" + e2.code + "]"; }
       gbtn.disabled = false;
     }
-  });
-
-  document.getElementById('ed-forgot').addEventListener('click', () => {
-    const adresse = mail.value.trim();
-    if (!adresse){ err.style.color=''; err.textContent = "Indiquez d'abord votre adresse électronique."; return; }
-    auth.sendPasswordResetEmail(adresse)
-      .then(() => { err.style.color = '#3E9080'; err.textContent = "Message de réinitialisation envoyé."; })
-      .catch(e => { err.style.color = ''; err.textContent = ED_MSG[e.code] || "Envoi impossible."; });
-  });
-})();
+  });})();
 
 /* =========================================================
    Portail « Vous êtes »
