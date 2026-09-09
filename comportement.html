@@ -160,6 +160,12 @@ body:not(.ed-ready){overflow:hidden}
 #ed-gate #ed-go{width:100%;padding:.72rem;border:0;border-radius:9px;background:#8A6BB8;color:#fff;
   font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer}
 #ed-gate #ed-go:disabled{opacity:.55;cursor:default}
+#ed-gate #ed-google{width:100%;box-sizing:border-box;padding:.7rem;border:1px solid #D9D0EC;border-radius:9px;
+  background:#fff;color:#453B62;font:600 .93rem/1 'Inter',system-ui,-apple-system,sans-serif;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:.5rem}
+#ed-gate #ed-google:disabled{opacity:.55;cursor:default}
+#ed-gate .ed-ou{display:flex;align-items:center;gap:.6rem;margin:1rem 0 1.1rem;font-size:.78rem;color:#9A92B4}
+#ed-gate .ed-ou::before,#ed-gate .ed-ou::after{content:"";flex:1;height:1px;background:#E7E0F2}
 #ed-gate .ed-err{margin:.85rem 0 0;font-size:.83rem;line-height:1.4;color:#C2624B;min-height:1.1rem}
 #ed-gate .ed-forgot{margin:.9rem 0 0;text-align:center}
 #ed-gate .ed-forgot button{background:none;border:0;color:#8A6BB8;text-decoration:underline;
@@ -174,6 +180,8 @@ body:not(.ed-ready){overflow:hidden}
   <div class="ed-box">
     <h2>Espace direction</h2>
     <p class="ed-sub">École élémentaire Jean Aicard — accès réservé aux comptes autorisés.</p>
+    <button id="ed-google" type="button">Se connecter avec Google</button>
+    <p class="ed-ou"><span>ou</span></p>
     <label for="ed-mail">Adresse électronique</label>
     <input type="email" id="ed-mail" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false">
     <label for="ed-pass">Mot de passe</label>
@@ -456,7 +464,9 @@ const ED_MSG = {
   'auth/invalid-credential'     : "Adresse ou mot de passe incorrect.",
   'auth/user-disabled'          : "Ce compte a été désactivé.",
   'auth/too-many-requests'      : "Trop de tentatives. Réessayez dans quelques minutes.",
-  'auth/network-request-failed' : "Réseau indisponible. Vérifiez la connexion."
+  'auth/network-request-failed' : "Réseau indisponible. Vérifiez la connexion.",
+  'auth/unauthorized-domain'    : "Ce domaine n'est pas autorisé dans la console Firebase.",
+  'auth/popup-blocked'          : "La fenêtre de connexion a été bloquée par le navigateur."
 };
 
 (function edPortail(){
@@ -507,6 +517,27 @@ const ED_MSG = {
   [mail, pass].forEach(el => el.addEventListener('keydown', e => {
     if (e.key === 'Enter') connecter();
   }));
+
+  /* --- Connexion Google (fenêtre, repli sur redirection) ------------------ */
+  const gbtn = document.getElementById('ed-google');
+  auth.getRedirectResult().catch(e => { err.textContent = ED_MSG[e.code] || "Connexion Google impossible."; });
+  gbtn.addEventListener('click', async () => {
+    err.style.color = ''; err.textContent = ''; gbtn.disabled = true;
+    const prov = new firebase.auth.GoogleAuthProvider();
+    prov.setCustomParameters({ prompt: 'select_account' });
+    try{
+      await auth.signInWithPopup(prov);
+    }catch(e){
+      if(['auth/popup-blocked','auth/cancelled-popup-request',
+          'auth/operation-not-supported-in-this-environment'].includes(e.code)){
+        try{ await auth.signInWithRedirect(prov); return; }
+        catch(e2){ err.textContent = ED_MSG[e2.code] || "Connexion Google impossible."; }
+      }else if(e.code !== 'auth/popup-closed-by-user'){
+        err.textContent = ED_MSG[e.code] || "Connexion Google impossible.";
+      }
+      gbtn.disabled = false;
+    }
+  });
 
   document.getElementById('ed-forgot').addEventListener('click', () => {
     const adresse = mail.value.trim();
