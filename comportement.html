@@ -520,7 +520,7 @@ const ED_MSG = {
 
   /* --- Connexion Google (fenêtre, repli sur redirection) ------------------ */
   const gbtn = document.getElementById('ed-google');
-  auth.getRedirectResult().catch(e => { err.textContent = ED_MSG[e.code] || "Connexion Google impossible."; });
+  auth.getRedirectResult().catch(e => { err.textContent = (ED_MSG[e.code] || "Connexion Google impossible.") + " [" + e.code + "]"; });
   gbtn.addEventListener('click', async () => {
     err.style.color = ''; err.textContent = ''; gbtn.disabled = true;
     const prov = new firebase.auth.GoogleAuthProvider();
@@ -528,13 +528,10 @@ const ED_MSG = {
     try{
       await auth.signInWithPopup(prov);
     }catch(e){
-      if(['auth/popup-blocked','auth/cancelled-popup-request',
-          'auth/operation-not-supported-in-this-environment'].includes(e.code)){
-        try{ await auth.signInWithRedirect(prov); return; }
-        catch(e2){ err.textContent = ED_MSG[e2.code] || "Connexion Google impossible."; }
-      }else if(e.code !== 'auth/popup-closed-by-user'){
-        err.textContent = ED_MSG[e.code] || "Connexion Google impossible.";
-      }
+      // La fenêtre échoue souvent sur un domaine différent de celui de Firebase :
+      // on repasse alors par la redirection, sans message inutile.
+      try{ await auth.signInWithRedirect(prov); return; }
+      catch(e2){ err.textContent = (ED_MSG[e2.code] || "Connexion Google impossible.") + " [" + e2.code + "]"; }
       gbtn.disabled = false;
     }
   });
