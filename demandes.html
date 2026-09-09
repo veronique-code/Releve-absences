@@ -395,11 +395,44 @@ const DESTINATAIRES = [
   ["Équipe éducative", [
     "Marie CATHONNET — RASED E",
     "Aurélien DACHEUX — RASED G",
-    "Ghislaine DUVAL — AESH",
     "Remplaçant / ZIL"
+  ]],
+  ["AESH — école", [
+    "Nezha AZARZAR",
+    "Mélinda BENABBOUN",
+    "Céline DEMICHELIS",
+    "Isabelle HAMET",
+    "Stéphanie LIEUTAUD",
+    "Gwenaëlle LIMOSINO",
+    "Jane MANDIC",
+    "Toutes les AESH de l'école"
+  ]],
+  ["AESH — PIAL PAS LG1 (autres écoles)", [
+    "Lucie BONNEFOY",
+    "Julie CABARETIER",
+    "Nathalie CANESSO",
+    "Charlotte CLAPSON",
+    "Karen CLUSANGE",
+    "Ghislaine DUVAL",
+    "Carole FERRETTI",
+    "Leïla GUISSI",
+    "Audrey GUYOT",
+    "Feyza HAMMADI",
+    "Elodie HELLAL",
+    "Anne LIBERT",
+    "Sylvie MANIE",
+    "Vanessa MARTIN",
+    "Christine MILLET",
+    "Nadia NINI",
+    "Nathalie REININGER",
+    "Inès ROVERS",
+    "Laurence SILVANO",
+    "Magalie WIEROWICZ",
+    "Toutes les AESH du PIAL"
   ]],
   ["Institutions", [
     "Circonscription / IEN La Garde",
+    "PIAL / PAS LG1 — coordination",
     "DSDEN 83 / Académie de Nice",
     "Mairie de La Garde",
     "Périscolaire / Cantine",
@@ -415,7 +448,8 @@ const DESTINATAIRES = [
 
 const CATEGORIES = [
   "Administratif","Pédagogique","Sécurité / PPMS","Matériel / Travaux",
-  "Coopérative","Sorties scolaires","Communication","Vie de l'élève","Autre"
+  "Coopérative","Sorties scolaires","Communication","Vie de l'élève",
+  "PIAL / AESH","Autre"
 ];
 
 const STATUTS = ["À faire","En cours","En attente","Terminée"];
@@ -733,7 +767,14 @@ function ouvrirForm(id){
   const t = id ? taches.find(x=>x.id===id) : null;
   document.getElementById("formTitle").textContent = t ? "Modifier la demande" : "Nouvelle demande";
   document.getElementById("f-titre").value = t?.titre || "";
-  document.getElementById("f-qui").value = t?.destinataire || "";
+  const selQui = document.getElementById("f-qui");
+  selQui.querySelectorAll('option[data-tmp="1"]').forEach(o => o.remove());
+  selQui.value = t?.destinataire || "";
+  if (t?.destinataire && selQui.value !== t.destinataire){
+    const o = document.createElement("option");
+    o.textContent = t.destinataire; o.dataset.tmp = "1";
+    selQui.appendChild(o); selQui.value = t.destinataire;
+  }
   document.getElementById("f-cat").value = t?.categorie || "";
   document.getElementById("f-date").value = t?.echeance || "";
   document.getElementById("f-notes").value = t?.remarques || "";
