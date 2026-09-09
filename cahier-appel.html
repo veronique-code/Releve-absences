@@ -819,6 +819,17 @@ async function edOuvrirSession(auth){
       else ouvrir(u);
     });
 
+    // Diagnostic provisoire : si aucune session n'est retrouvée en 2 secondes,
+    // la page l'annonce au lieu de rester muette.
+    setTimeout(() => {
+      if(ouvert) return;
+      const u = auth.currentUser;
+      err.style.color = '#7A719A';
+      err.textContent = u
+        ? ("Session trouvée : " + (u.email || u.uid) + " — mais l'ouverture a échoué.")
+        : "Aucune session trouvée sur cette page.";
+    }, 2000);
+
     async function connecter(){
       err.style.color = '';
       err.textContent = '';
@@ -844,7 +855,9 @@ async function edOuvrirSession(auth){
   const gbtn = document.getElementById('ed-google');
   getRedirectResult(auth).catch(e => { err.textContent = (ED_MSG[e.code] || "Connexion Google impossible.") + " [" + e.code + "]"; });
   gbtn.addEventListener('click', async () => {
-    err.style.color = ''; err.textContent = ''; gbtn.disabled = true;
+    err.style.color = '#3E9080';
+    err.textContent = "Clic reçu — ouverture de Google…";
+    gbtn.disabled = true;
     const prov = new GoogleAuthProvider();
     prov.setCustomParameters({ prompt: 'select_account' });
     try{
