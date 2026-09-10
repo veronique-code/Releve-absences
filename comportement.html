@@ -351,7 +351,8 @@ body:not(.ed-ready){overflow:hidden}
       <select id="e-classe"></select>
     </div>
     <div class="field">
-      <label for="e-add">Ajouter des élèves — un par ligne, prénom et initiale</label>
+      <p class="msg" id="e-source" style="margin:0 0 .8rem; color:var(--muted)">Les élèves du cahier d'appel apparaissent automatiquement. Ajoutez ici seulement un élève qui n'y figure pas.</p>
+      <label for="e-add">Ajouter des élèves hors cahier d'appel — un par ligne</label>
       <textarea id="e-add" placeholder="Lucas M.&#10;Inès B.&#10;Noah T."></textarea>
     </div>
     <button class="btn" id="e-save">Ajouter à la classe</button>
@@ -417,9 +418,13 @@ const firebaseConfig = {
 const DOC_ID = "77459b9b941bcb4714d0c121313c900e";
 firebase.initializeApp(firebaseConfig);
 const docRef = firebase.firestore().collection("comportement").doc(DOC_ID);
+// Lecture seule : les élèves sont repris du cahier d'appel (même base, même document).
+const docAppel = firebase.firestore().collection("cahier-appel").doc(DOC_ID);
 
 let state = { eleves: [], obs: [] };
 let ready = false;
+let elevesAppel = [];      // élèves repris du cahier d'appel
+let classesEnPlus = [];    // classes du cahier d'appel absentes de la liste CLASSES
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -427,7 +432,72 @@ const sync = m => { $("#sync").textContent = m; };
 
 const heure = () => new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
 
+/* ---------- Élèves du cahier d'appel ---------- */
+const norm = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  .toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+// Fait correspondre un nom de classe du cahier d'appel (« CPA », « CE1-CE2 »…)
+// à la liste de ce registre (« CP A », « CE1-CE2 »…).
+function classeDepuisAppel(nom){
+  const n = norm(nom);
+  const exacte = CLASSES.find(c => norm(c) === n);
+  if (exacte) return exacte;
+  const prefixes = CLASSES.filter(c => n.startsWith(norm(c)))
+    .sort((a,b) => norm(b).length - norm(a).length);
+  return prefixes[0] || nom;
+}
+const idAppel = (classe, nom) => "ca:" + norm(classe) + ":" + norm(nom);
+
+function suivreCahierAppel(){
+  docAppel.onSnapshot(snap => {
+    let donnees = { classes: [] };
+    try {
+      const d = snap.data();
+      if (d && d.payload) donnees = JSON.parse(d.payload);
+    } catch (e) { console.error(e); }
+    const liste = [], vus = new Set(), enPlus = [];
+    (donnees.classes || []).forEach(c => {
+      const classe = classeDepuisAppel(c.name);
+      if (!CLASSES.includes(classe) && !enPlus.includes(classe)) enPlus.push(classe);
+      (c.students || []).forEach(s => {
+        if (!s || !s.name) return;
+        const id = idAppel(classe, s.name);
+        if (vus.has(id)) return;
+        vus.add(id);
+        liste.push({ id, nom: s.name, classe, source: "appel" });
+      });
+    });
+    elevesAppel = liste;
+    classesEnPlus = enPlus;
+    remplirClasses();
+    const note = document.getElementById("e-source");
+    if (note) {
+      note.style.color = "";
+      note.className = "msg";
+      note.style.color = "var(--muted)";
+      note.textContent = liste.length
+        ? `Les ${liste.length} élèves du cahier d'appel apparaissent automatiquement. Ajoutez ici seulement un élève qui n'y figure pas.`
+        : "Aucun élève trouvé dans le cahier d'appel. Vous pouvez en ajouter ici.";
+    }
+    renderAll();
+  }, err => {
+    console.error(err);
+    const code = err && err.code ? " [" + err.code + "]" : "";
+    const note = document.getElementById("e-source");
+    if (note) { note.className = "msg ko"; note.style.color = ""; note.textContent = "Les élèves du cahier d'appel n'ont pas pu être lus" + code + "."; }
+  });
+}
+
+const toutesClasses = () => CLASSES.concat(classesEnPlus);
+function remplirClasses(){
+  if (!$("#f-classe")) return;
+  [ "#f-classe", "#e-classe" ].forEach(s => fillSelect($(s), toutesClasses()));
+  fillSelect($("#j-classe"), toutesClasses(), { placeholder:"Toutes les classes" });
+  fillSelect($("#s-classe"), toutesClasses(), { placeholder:"Choisir…" });
+}
+
 function edDemarrerSync(){
+  suivreCahierAppel();
   sync("Chargement des données…");
   docRef.onSnapshot(snap => {
     // Écho de nos propres enregistrements en cours : l'écran est déjà à jour,
@@ -504,9 +574,17 @@ function fillSelect(sel, items, opts = {}){
         : `<option value="${esc(i.v)}">${esc(i.l)}</option>`).join("");
   if ([...sel.options].some(o => o.value === keep)) sel.value = keep;
 }
-const elevesDe = c => state.eleves.filter(e => e.classe === c)
-  .sort((a,b) => a.nom.localeCompare(b.nom,"fr"));
-const eleveById = id => state.eleves.find(e => e.id === id);
+// Élèves d'une classe : ceux du cahier d'appel, plus ceux ajoutés ici.
+// Si un élève ajouté ici porte le même nom qu'un élève du cahier, on garde
+// celui d'ici pour ne pas détacher les observations déjà saisies.
+const elevesDe = c => {
+  const ajoutes = state.eleves.filter(e => e.classe === c);
+  const noms = new Set(ajoutes.map(e => norm(e.nom)));
+  const appel = elevesAppel.filter(e => e.classe === c && !noms.has(norm(e.nom)));
+  return appel.concat(ajoutes).sort((a,b) => a.nom.localeCompare(b.nom,"fr"));
+};
+const eleveById = id => elevesAppel.find(e => e.id === id) || state.eleves.find(e => e.id === id);
+const nomEleve = o => (eleveById(o.eleveId) || {}).nom || o.eleveNom || "";
 
 /* =========================================================
    Accès réservé — authentification Firebase
@@ -619,9 +697,7 @@ $$("nav button").forEach(b => b.onclick = () => {
 let typeCourant = "incident";
 
 function initApp(){
-  [ "#f-classe", "#e-classe" ].forEach(s => fillSelect($(s), CLASSES));
-  fillSelect($("#j-classe"), CLASSES, { placeholder:"Toutes les classes" });
-  fillSelect($("#s-classe"), CLASSES, { placeholder:"Choisir…" });
+  remplirClasses();
   fillSelect($("#f-lieu"), LIEUX);
   $("#f-date").value = today();
   majMotifs();
@@ -642,7 +718,7 @@ function initApp(){
     renderAll();
   };
   const classeMemo = localStorage.getItem("ja-comport-classe");
-  if (classeMemo && CLASSES.includes(classeMemo)) {
+  if (classeMemo && toutesClasses().includes(classeMemo)) {
     [ "#f-classe", "#s-classe", "#e-classe" ].forEach(s => { $(s).value = classeMemo; });
   }
   $("#f-classe").onchange = () => choisirClasse($("#f-classe").value);
@@ -678,6 +754,7 @@ function ajouterObs(){
   if (!txt) { alert("Décrivez les faits avant d'enregistrer."); return; }
   state.obs.push({
     id: uid(), date: $("#f-date").value || today(), eleveId,
+    eleveNom: (eleveById(eleveId) || {}).nom || "",
     classe: $("#f-classe").value, type: typeCourant, cat: $("#f-cat").value,
     lieu: typeCourant === "incident" ? $("#f-lieu").value : "",
     grav: typeCourant === "incident" ? +$("#f-grav").value : null,
@@ -707,7 +784,7 @@ function obsHTML(o){
   const e = eleveById(o.eleveId);
   return `<article class="obs" data-t="${o.type}">
     <div class="obs-top">
-      <span class="obs-who">${esc(e ? e.nom : "Élève supprimé")}</span>
+      <span class="obs-who">${esc(e ? e.nom : (o.eleveNom || "Élève supprimé"))}</span>
       <span class="obs-meta">${frDate(o.date)} · ${esc(o.classe)}</span>
     </div>
     <div class="obs-cat">${esc(o.cat)}${o.lieu ? " · " + esc(o.lieu) : ""}${o.grav === 3 ? '<span class="grav">niveau 3</span>' : ""}</div>
@@ -748,7 +825,7 @@ function exportCSV(){
   if (!l.length) { alert("Rien à exporter avec ces filtres."); return; }
   const q = v => '"' + String(v ?? "").replace(/"/g,'""') + '"';
   const lignes = [["Date","Classe","Élève","Nature","Motif","Lieu","Niveau","Faits","Saisi par"].map(q).join(";")]
-    .concat(l.map(o => [frDate(o.date), o.classe, (eleveById(o.eleveId)||{}).nom || "",
+    .concat(l.map(o => [frDate(o.date), o.classe, nomEleve(o),
       LABEL[o.type], o.cat, o.lieu, o.grav || "", o.txt, o.auteur].map(q).join(";")));
   const blob = new Blob(["\ufeff" + lignes.join("\r\n")], { type:"text/csv;charset=utf-8" });
   const a = document.createElement("a");
@@ -764,7 +841,7 @@ function renderSynthese(){
   const id = $("#s-eleve").value;
   const box = $("#synthese-body");
   if (!id) { box.innerHTML = `<div class="empty"><p>Choisissez une classe puis un élève.</p><p>La fiche rassemble toutes les observations le concernant.</p></div>`; return; }
-  const e = eleveById(id);
+  const e = eleveById(id) || { nom: "cet élève" };
   const l = state.obs.filter(o => o.eleveId === id).sort(triDate);
   const n = t => l.filter(o => o.type === t).length;
   box.innerHTML = `
@@ -779,7 +856,7 @@ function renderSynthese(){
 function imprimerFiche(){
   const id = $("#s-eleve").value;
   if (!id) { alert("Choisissez un élève avant d'imprimer."); return; }
-  const e = eleveById(id);
+  const e = eleveById(id) || { nom: "", classe: $("#s-classe").value };
   const l = state.obs.filter(o => o.eleveId === id).sort((a,b) => a.date.localeCompare(b.date));
   $("#print-area").innerHTML = `
     <div class="pr-head">${esc(ECOLE)}</div>
@@ -804,13 +881,13 @@ function ajouterEleves(){
   if (!lignes.length) { alert("Saisissez au moins un nom."); return; }
   let ajoutes = 0;
   lignes.forEach(nom => {
-    if (state.eleves.some(e => e.classe === c && e.nom.toLowerCase() === nom.toLowerCase())) return;
+    if (elevesDe(c).some(e => norm(e.nom) === norm(nom))) return;
     state.eleves.push({ id: uid(), nom, classe: c });
     ajoutes++;
   });
   if (!ajoutes) {
     $("#e-add").value = "";
-    message("e-msg", "Ces élèves figurent déjà en " + c + ".", true);
+    message("e-msg", "Ces élèves figurent déjà en " + c + " (cahier d'appel ou liste).", true);
     return;
   }
   renderAll();
@@ -842,8 +919,10 @@ function renderEleves(){
     const n = state.obs.filter(o => o.eleveId === e.id).length;
     return `<div class="eleve-line"><span>${esc(e.nom)}</span>
       <span class="count">${n} obs.</span>
-      <button class="btn btn-ghost btn-sm" onclick="supprimerEleve('${e.id}')">Retirer</button></div>`;
-  }).join("") : `<div class="empty"><p>Aucun élève dans cette classe.</p><p>Collez la liste ci-dessus pour la constituer.</p></div>`;
+      ${e.source === "appel"
+        ? `<span class="count" title="Modifier la liste dans le cahier d'appel">cahier d'appel</span>`
+        : `<button class="btn btn-ghost btn-sm" onclick="supprimerEleve('${e.id}')">Retirer</button>`}</div>`;
+  }).join("") : `<div class="empty"><p>Aucun élève dans cette classe.</p><p>Vérifiez la classe dans le cahier d'appel, ou ajoutez un élève ci-dessus.</p></div>`;
 }
 
 /* =========================================================
