@@ -47,6 +47,27 @@ nav button[aria-current="true"]{color:var(--ink); border-bottom-color:var(--ink)
 main{max-width:760px; margin:0 auto; padding:1rem 1rem 5rem}
 section[hidden]{display:none}
 
+/* ---------- Retour à l'Espace direction ---------- */
+.retour-hub{
+  display:inline-flex;align-items:center;gap:.45rem;
+  padding:7px 14px 7px 11px;
+  background:#FFFFFF;border:1px solid #E7E0F2;border-radius:999px;
+  color:#7A719A;text-decoration:none;
+  font-size:13px;font-weight:600;line-height:1;
+  transition:color .15s ease,border-color .15s ease;
+}
+.retour-hub:hover{color:#453B62;border-color:#B7A6E0;}
+.retour-hub:focus-visible{outline:2px solid #8A6BB8;outline-offset:2px;}
+.retour-hub .fl{display:inline-block;transition:transform .15s ease;}
+.retour-hub:hover .fl{transform:translateX(-3px);}
+.hub-bar{padding:0 0 .55rem;}
+@media (max-width:640px){
+  .retour-hub{font-size:15px;padding:9px 16px 9px 13px;}
+}
+.msg{font-size:.85rem; margin:.6rem 0 0}
+.msg.ok{color:var(--positif)}
+.msg.ko{color:var(--incident)}
+
 /* ---------- Blocs ---------- */
 .card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:1rem; margin-bottom:1rem}
 .field{margin-bottom:.85rem}
@@ -198,10 +219,12 @@ body:not(.ed-ready){overflow:hidden}
     </div>
     <button class="btn" id="g-go" style="width:100%">Ouvrir le cahier</button>
     <p class="err" id="g-err" hidden></p>
+    <p style="margin:1rem 0 0; text-align:center"><a class="retour-hub" href="./index.html"><span class="fl">←</span> Espace direction</a></p>
   </div>
 </div>
 
 <header hidden id="app-head">
+  <div class="hub-bar"><a class="retour-hub" href="./index.html"><span class="fl">←</span> Espace direction</a></div>
   <div class="head-row">
     <h1>Suivi du comportement</h1>
     <span class="whoami"><span id="who-name"></span> · <button id="logout">quitter</button></span>
@@ -264,6 +287,7 @@ body:not(.ed-ready){overflow:hidden}
       <textarea id="f-txt" placeholder="Faits constatés, en termes factuels."></textarea>
     </div>
     <button class="btn" id="f-save" style="width:100%">Enregistrer l'observation</button>
+    <p class="msg" id="f-msg" hidden></p>
   </div>
   <div id="recent"></div>
 </section>
@@ -331,10 +355,11 @@ body:not(.ed-ready){overflow:hidden}
       <textarea id="e-add" placeholder="Lucas M.&#10;Inès B.&#10;Noah T."></textarea>
     </div>
     <button class="btn" id="e-save">Ajouter à la classe</button>
+    <p class="msg" id="e-msg" hidden></p>
   </div>
   <div class="card">
     <h3 style="font-size:1rem; margin-bottom:.4rem" id="e-title">Élèves inscrits</h3>
-    <div id="e-list"></div>
+    <div id="e-list"><div class="empty"><p>Chargement des données…</p></div></div>
   </div>
 </section>
 
@@ -394,35 +419,73 @@ firebase.initializeApp(firebaseConfig);
 const docRef = firebase.firestore().collection("comportement").doc(DOC_ID);
 
 let state = { eleves: [], obs: [] };
-let suppressNextWrite = false;
-let saveTimer = null;
 let ready = false;
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const sync = m => { $("#sync").textContent = m; };
 
+const heure = () => new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+
 function edDemarrerSync(){
-docRef.onSnapshot(snap => {
-  if (suppressNextWrite) { suppressNextWrite = false; return; }
-  const d = snap.data();
-  if (d) state = { eleves: d.eleves || [], obs: d.obs || [] };
-  ready = true;
-  sync("Synchronisé à " + new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}));
-  renderAll();
-}, err => { sync("Connexion interrompue — les modifications seront envoyées au retour du réseau."); console.error(err); });
+  sync("Chargement des données…");
+  docRef.onSnapshot(snap => {
+    // Écho de nos propres enregistrements en cours : l'écran est déjà à jour,
+    // on ne recharge pas (sinon une saisie pourrait être écrasée).
+    if (snap.metadata.hasPendingWrites) return;
+    // Hors connexion au démarrage, Firebase peut renvoyer un document vide
+    // provisoire : on attend les vraies données avant d'autoriser la saisie,
+    // pour ne jamais écraser le registre existant.
+    if (!ready && snap.metadata.fromCache && !snap.exists) {
+      sync("En attente de connexion — la saisie sera possible dès le chargement des données.");
+      return;
+    }
+    const d = snap.data();
+    state = d ? { eleves: d.eleves || [], obs: d.obs || [] } : { eleves: [], obs: [] };
+    ready = true;
+    sync("Synchronisé à " + heure());
+    renderAll();
+  }, err => {
+    console.error(err);
+    const code = err && err.code ? " [" + err.code + "]" : "";
+    sync("Accès aux données impossible" + code + " — rechargez la page.");
+    const liste = document.getElementById("e-list");
+    if (liste) liste.innerHTML = `<div class="empty"><p>Les données n'ont pas pu être chargées${esc(code)}.</p><p>Rechargez la page.</p></div>`;
+  });
 }
 
+// Enregistrement immédiat. Renvoie une promesse : true si la base a bien
+// reçu les données, false sinon (avec un message explicite).
 function save(){
-  clearTimeout(saveTimer);
   sync("Enregistrement…");
-  saveTimer = setTimeout(() => {
-    suppressNextWrite = true;
-    docRef.set({ eleves: state.eleves, obs: state.obs, maj: Date.now() })
-      .then(() => sync("Enregistré à " + new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})))
-      .catch(e => { suppressNextWrite = false; sync("Échec de l'enregistrement — vérifiez la connexion."); console.error(e); });
-  }, 400);
+  return docRef.set({ eleves: state.eleves, obs: state.obs, maj: Date.now() })
+    .then(() => { sync("Enregistré à " + heure()); return true; })
+    .catch(e => {
+      console.error(e);
+      const code = e && e.code ? " [" + e.code + "]" : "";
+      sync("Échec de l'enregistrement" + code);
+      alert("L'enregistrement a échoué" + code + ".\n"
+        + (e && e.code === "permission-denied"
+            ? "La base de données a refusé l'accès à ce compte."
+            : "Vérifiez la connexion puis recommencez."));
+      return false;
+    });
 }
+
+function message(id, texte, ok){
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = texte;
+  el.className = "msg " + (ok ? "ok" : "ko");
+  el.hidden = false;
+  clearTimeout(el._t);
+  if (ok) el._t = setTimeout(() => { el.hidden = true; }, 6000);
+}
+const pasPret = () => {
+  if (ready) return false;
+  alert("Les données sont encore en cours de chargement. Patientez quelques secondes puis recommencez.");
+  return true;
+};
 
 /* =========================================================
    Utilitaires
@@ -569,10 +632,23 @@ function initApp(){
     majMotifs();
   });
 
-  $("#f-classe").onchange = () => majEleves($("#f-classe"), $("#f-eleve"));
-  $("#s-classe").onchange = () => { majEleves($("#s-classe"), $("#s-eleve"), true); renderSynthese(); };
+  // La classe choisie dans un onglet est reprise dans les autres
+  // (Noter, Fiche élève, Élèves) et mémorisée sur cet appareil.
+  const choisirClasse = c => {
+    if (!c) return;
+    [ "#f-classe", "#s-classe", "#e-classe" ].forEach(s => { $(s).value = c; });
+    localStorage.setItem("ja-comport-classe", c);
+    $("#e-msg").hidden = true;
+    renderAll();
+  };
+  const classeMemo = localStorage.getItem("ja-comport-classe");
+  if (classeMemo && CLASSES.includes(classeMemo)) {
+    [ "#f-classe", "#s-classe", "#e-classe" ].forEach(s => { $(s).value = classeMemo; });
+  }
+  $("#f-classe").onchange = () => choisirClasse($("#f-classe").value);
+  $("#s-classe").onchange = () => choisirClasse($("#s-classe").value);
   $("#s-eleve").onchange = renderSynthese;
-  $("#e-classe").onchange = renderEleves;
+  $("#e-classe").onchange = () => choisirClasse($("#e-classe").value);
   [ "#j-classe", "#j-type", "#j-du", "#j-au" ].forEach(s => $(s).onchange = renderJournal);
 
   $("#f-save").onclick = ajouterObs;
@@ -595,6 +671,7 @@ function majEleves(selClasse, selEleve, placeholder){
    Saisie
    ========================================================= */
 function ajouterObs(){
+  if (pasPret()) return;
   const eleveId = $("#f-eleve").value;
   const txt = $("#f-txt").value.trim();
   if (!eleveId) { alert("Sélectionnez un élève. Ajoutez-le d'abord dans l'onglet Élèves si besoin."); return; }
@@ -606,10 +683,16 @@ function ajouterObs(){
     grav: typeCourant === "incident" ? +$("#f-grav").value : null,
     txt, auteur: moi, saisi: Date.now()
   });
-  save();
-  $("#f-txt").value = "";
   renderAll();
-  window.scrollTo({ top: 0, behavior:"smooth" });
+  message("f-msg", "Enregistrement…", true);
+  save().then(ok => {
+    if (ok) {
+      $("#f-txt").value = "";
+      message("f-msg", "Observation enregistrée.", true);
+    } else {
+      message("f-msg", "Observation non enregistrée — le texte saisi est conservé, recommencez.", false);
+    }
+  });
 }
 
 function supprimerObs(id){
@@ -715,6 +798,7 @@ function imprimerFiche(){
    Élèves
    ========================================================= */
 function ajouterEleves(){
+  if (pasPret()) return;
   const c = $("#e-classe").value;
   const lignes = $("#e-add").value.split("\n").map(s => s.trim()).filter(Boolean);
   if (!lignes.length) { alert("Saisissez au moins un nom."); return; }
@@ -724,9 +808,21 @@ function ajouterEleves(){
     state.eleves.push({ id: uid(), nom, classe: c });
     ajoutes++;
   });
-  $("#e-add").value = "";
-  save(); renderAll();
-  sync(ajoutes + " élève(s) ajouté(s) en " + c);
+  if (!ajoutes) {
+    $("#e-add").value = "";
+    message("e-msg", "Ces élèves figurent déjà en " + c + ".", true);
+    return;
+  }
+  renderAll();
+  message("e-msg", "Enregistrement…", true);
+  save().then(ok => {
+    if (ok) {
+      $("#e-add").value = "";
+      message("e-msg", ajoutes + " élève" + (ajoutes > 1 ? "s ajoutés" : " ajouté") + " en " + c + " et enregistré" + (ajoutes > 1 ? "s" : "") + ".", true);
+    } else {
+      message("e-msg", "Élèves non enregistrés — la liste saisie est conservée, recommencez.", false);
+    }
+  });
 }
 
 function supprimerEleve(id){
