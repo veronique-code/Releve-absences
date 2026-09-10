@@ -223,6 +223,27 @@ input:focus, select:focus{ outline:2px solid var(--gold); outline-offset:1px; }
   color:var(--retard);
   background:#F7E7C2;
 }
+.row-right{ display:flex; align-items:center; gap:.45rem; flex-shrink:0; }
+button.justif-btn{
+  display:none;
+  font-size:.72rem;
+  font-weight:500;
+  padding:0 .7rem;
+  min-height:32px;
+  line-height:1;
+  border-radius:999px;
+  border:1px dashed var(--absent);
+  background:transparent;
+  color:var(--absent);
+}
+button.justif-btn.on{
+  border-style:solid;
+  border-color:var(--present-green);
+  background:#E5F0E9;
+  color:var(--present-green);
+}
+.student-row.absent button.justif-btn{ display:inline-block; }
+.unsaved-note{ color:var(--absent); font-weight:500; }
 
 button{
   font-family:'Inter',sans-serif;
@@ -368,6 +389,7 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   color:var(--absent);
 }
 .day-chip.ret{ background:var(--retard-bg); color:var(--retard); }
+.day-chip.just{ background:#E5F0E9; color:var(--present-green); }
 .day-ok{ font-size:.85rem; color:var(--present-green); }
 .day-pending{ font-size:.85rem; color:var(--ink-soft); font-style:italic; }
 .day-row.pending .day-class{ color:var(--ink-soft); }
@@ -459,6 +481,7 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   padding-top:3px;
 }
 .pstudents.pempty{ color:#9A947F; font-style:italic; }
+.pstudents i{ font-style:normal; color:#8C332A; }
 
 table.pday{ width:100%; border-collapse:collapse; font-size:10px; color:#25344B; }
 table.pday th{
@@ -1016,6 +1039,10 @@ function renderAppel(){
   // lateIds n'existe pas dans les appels enregistrés avant l'ajout des
   // retards : on retombe alors sur une liste vide.
   const lateSet = new Set(dayRecord && dayRecord.lateIds ? dayRecord.lateIds : []);
+  // justifiedIds : absences justifiées (sous-ensemble de absentIds). Absent des
+  // appels enregistrés avant cet ajout : toutes les absences sont alors non justifiées.
+  const justSet = new Set(dayRecord && dayRecord.justifiedIds ? dayRecord.justifiedIds : []);
+  const nonJust = [...absentSet].filter(id=>!justSet.has(id)).length;
   const taken = dayRecord !== null;
   const etatDe = sid => absentSet.has(sid) ? 'absent' : lateSet.has(sid) ? 'retard' : '';
   const libelleDe = e => e==='absent' ? 'Absent' : e==='retard' ? 'En retard' : 'Présent';
@@ -1036,7 +1063,7 @@ function renderAppel(){
       ${cls.students.length===0
         ? '<span class="empty">Cette classe n\'a pas encore d\'élèves.</span>'
         : taken
-          ? `Appel <b class="taken">déjà enregistré</b> pour cette date &mdash; ${absentSet.size} absent${absentSet.size>1?'s':''} sur ${cls.students.length}${lateSet.size ? ` · ${lateSet.size} retard${lateSet.size>1?'s':''}` : ''}.`
+          ? `Appel <b class="taken">déjà enregistré</b> pour cette date &mdash; ${absentSet.size} absent${absentSet.size>1?'s':''} sur ${cls.students.length}${absentSet.size ? ` (dont ${nonJust} non justifié${nonJust>1?'s':''})` : ''}${lateSet.size ? ` · ${lateSet.size} retard${lateSet.size>1?'s':''}` : ''}.`
           : `Appel <b>non encore enregistré</b> pour cette date.`
       }
     </div>
@@ -1045,11 +1072,15 @@ function renderAppel(){
       ${cls.students.map(s=>`
         <div class="student-row ${etatDe(s.id)}" data-sid="${s.id}">
           <span class="student-name">${escapeHtml(s.name)}</span>
-          <span class="student-tag">${libelleDe(etatDe(s.id))}</span>
+          <span class="row-right">
+            <button type="button" class="justif-btn ${justSet.has(s.id)?'on':''}" aria-pressed="${justSet.has(s.id)}" title="Toucher pour changer">${justSet.has(s.id)?'Justifiée':'Non justifiée'}</button>
+            <span class="student-tag">${libelleDe(etatDe(s.id))}</span>
+          </span>
         </div>
       `).join('')}
     </div>
-    <p class="small-note" style="margin:.5rem 0 0;">Touchez un nom pour faire défiler&nbsp;: présent → absent → en retard.</p>
+    <p class="small-note" style="margin:.5rem 0 0;">Touchez un nom pour faire défiler&nbsp;: présent → absent → en retard. Pour un absent, touchez «&nbsp;Non justifiée&nbsp;» dès que l'absence est justifiée.</p>
+    <p class="small-note unsaved-note" id="unsaved-note" style="display:none; margin:.4rem 0 0;">Modifications non enregistrées&nbsp;: pensez à valider.</p>
     <button id="validate-btn">${taken ? 'Mettre à jour l\'appel' : 'Valider l\'appel du jour'}</button>
     ` : ''}
   `;
@@ -1068,13 +1099,30 @@ function renderAppel(){
   if(list){
     let workingAbsent = new Set(absentSet);
     let workingLate = new Set(lateSet);
+    let workingJust = new Set(justSet);
+    const signalerModif = ()=>{ document.getElementById('unsaved-note').style.display = 'block'; };
+    const afficherJustif = (btn, on)=>{
+      btn.classList.toggle('on', on);
+      btn.setAttribute('aria-pressed', on);
+      btn.textContent = on ? 'Justifiée' : 'Non justifiée';
+    };
     list.querySelectorAll('.student-row').forEach(row=>{
+      const btnJustif = row.querySelector('.justif-btn');
+      btnJustif.addEventListener('click', e=>{
+        // Ne pas déclencher le changement présent / absent / retard de la ligne
+        e.stopPropagation();
+        const sid = row.dataset.sid;
+        if(workingJust.has(sid)) workingJust.delete(sid); else workingJust.add(sid);
+        afficherJustif(btnJustif, workingJust.has(sid));
+        signalerModif();
+      });
       row.addEventListener('click', ()=>{
         const sid = row.dataset.sid;
         // Cycle : présent → absent → en retard → présent
         let etat;
         if(workingAbsent.has(sid)){
           workingAbsent.delete(sid); workingLate.add(sid); etat = 'retard';
+          workingJust.delete(sid); afficherJustif(btnJustif, false);
         }else if(workingLate.has(sid)){
           workingLate.delete(sid); etat = '';
         }else{
@@ -1083,13 +1131,15 @@ function renderAppel(){
         row.classList.remove('absent','retard');
         if(etat) row.classList.add(etat);
         row.querySelector('.student-tag').textContent = libelleDe(etat);
+        signalerModif();
       });
     });
     document.getElementById('validate-btn').addEventListener('click', async ()=>{
       if(!DATA.absences[ui.selectedDate]) DATA.absences[ui.selectedDate] = {};
       DATA.absences[ui.selectedDate][cls.id] = {
         absentIds: Array.from(workingAbsent),
-        lateIds: Array.from(workingLate)
+        lateIds: Array.from(workingLate),
+        justifiedIds: Array.from(workingJust).filter(id=>workingAbsent.has(id))
       };
       await saveData();
       render();
@@ -1126,13 +1176,18 @@ function buildDayReport(date){
     return {
       cls: c,
       taken: rec !== null,
-      absents: rec ? rec.absentIds.map(nameOf).sort(tri) : [],
+      absents: rec
+        ? rec.absentIds
+            .map(sid=>({ name: nameOf(sid), just: !!(rec.justifiedIds && rec.justifiedIds.includes(sid)) }))
+            .sort((a,b)=>tri(a.name,b.name))
+        : [],
       retards: rec && rec.lateIds ? rec.lateIds.map(nameOf).sort(tri) : []
     };
   });
   return {
     rows,
     totalAbs: rows.reduce((n,r)=>n+r.absents.length, 0),
+    totalNonJust: rows.reduce((n,r)=>n+r.absents.filter(a=>!a.just).length, 0),
     totalRet: rows.reduce((n,r)=>n+r.retards.length, 0),
     done: rows.filter(r=>r.taken).length,
     effectif: DATA.classes.reduce((n,c)=>n+c.students.length, 0)
@@ -1167,7 +1222,7 @@ function renderJour(){
       <div class="stat-card">
         <div class="label">Absents</div>
         <div class="value ${rep.totalAbs>0?'rate-high':'rate-ok'}">${rep.totalAbs}</div>
-        <div class="small-note" style="margin:.2rem 0 0;">sur ${rep.effectif} élèves inscrits</div>
+        <div class="small-note" style="margin:.2rem 0 0;">sur ${rep.effectif} élèves inscrits${rep.totalAbs ? ` · dont ${rep.totalNonJust} non justifié${rep.totalNonJust>1?'s':''}` : ''}</div>
       </div>
       <div class="stat-card">
         <div class="label">Retards</div>
@@ -1190,7 +1245,9 @@ function renderJour(){
               ? '<span class="day-pending">Appel non saisi</span>'
               : (r.absents.length===0 && r.retards.length===0
                   ? '<span class="day-ok">Tous présents</span>'
-                  : r.absents.map(n=>`<span class="day-chip">${escapeHtml(n)}</span>`).join('')
+                  : r.absents.map(a=> a.just
+                      ? `<span class="day-chip just">${escapeHtml(a.name)} · justifiée</span>`
+                      : `<span class="day-chip">${escapeHtml(a.name)}</span>`).join('')
                     + r.retards.map(n=>`<span class="day-chip ret">${escapeHtml(n)} · retard</span>`).join(''))}
           </div>
         </div>
@@ -1229,12 +1286,12 @@ function dayListAsText(date){
   rep.rows.forEach(r=>{
     if(!r.taken){ lignes.push(`${r.cls.name} : appel non saisi`); return; }
     if(r.absents.length===0 && r.retards.length===0){ lignes.push(`${r.cls.name} : tous présents`); return; }
-    let l = `${r.cls.name} : ${r.absents.length ? r.absents.join(', ') : 'aucun absent'}`;
+    let l = `${r.cls.name} : ${r.absents.length ? r.absents.map(a=> a.just ? `${a.name} (justifiée)` : a.name).join(', ') : 'aucun absent'}`;
     if(r.retards.length) l += ` (retards : ${r.retards.join(', ')})`;
     lignes.push(l);
   });
   lignes.push('');
-  lignes.push(`Total : ${rep.totalAbs} absent${rep.totalAbs>1?'s':''} sur ${rep.effectif} élèves${rep.totalRet ? ` · ${rep.totalRet} retard${rep.totalRet>1?'s':''}` : ''}.`);
+  lignes.push(`Total : ${rep.totalAbs} absent${rep.totalAbs>1?'s':''} sur ${rep.effectif} élèves${rep.totalAbs ? ` (dont ${rep.totalNonJust} non justifié${rep.totalNonJust>1?'s':''})` : ''}${rep.totalRet ? ` · ${rep.totalRet} retard${rep.totalRet>1?'s':''}` : ''}.`);
   return lignes.join('\n');
 }
 
@@ -1270,7 +1327,9 @@ function printDayList(date){
     if(!r.taken){
       cellule = '<td class="pday-none" colspan="2">Appel non saisi</td>';
     }else{
-      const abs = r.absents.length ? escapeHtml(r.absents.join(', ')) : '<span style="color:#9A947F;">Aucun</span>';
+      const abs = r.absents.length
+        ? r.absents.map(a=> a.just ? `${escapeHtml(a.name)} <span style="color:#3E6350;">(justifiée)</span>` : escapeHtml(a.name)).join(', ')
+        : '<span style="color:#9A947F;">Aucun</span>';
       const ret = r.retards.length ? escapeHtml(r.retards.join(', ')) : '—';
       cellule = `<td>${abs}</td><td style="width:22%">${ret}</td>`;
     }
@@ -1286,7 +1345,7 @@ function printDayList(date){
       <thead><tr><th>Classe</th><th>Absents</th><th>Retards</th></tr></thead>
       <tbody>${lignes}</tbody>
     </table>
-    <p class="pday-foot">${rep.totalAbs} absent${rep.totalAbs>1?'s':''} sur ${rep.effectif} élèves inscrits${rep.totalRet ? ` &middot; ${rep.totalRet} retard${rep.totalRet>1?'s':''}` : ''} &middot; ${rep.done}/${DATA.classes.length} appel${DATA.classes.length>1?'s':''} saisi${rep.done>1?'s':''}.</p>
+    <p class="pday-foot">${rep.totalAbs} absent${rep.totalAbs>1?'s':''} sur ${rep.effectif} élèves inscrits${rep.totalAbs ? ` (dont ${rep.totalNonJust} non justifié${rep.totalNonJust>1?'s':''})` : ''}${rep.totalRet ? ` &middot; ${rep.totalRet} retard${rep.totalRet>1?'s':''}` : ''} &middot; ${rep.done}/${DATA.classes.length} appel${DATA.classes.length>1?'s':''} saisi${rep.done>1?'s':''}.</p>
   `;
   setTimeout(()=> window.print(), 60);
 }
@@ -1584,8 +1643,9 @@ async function confirmImport(){
 
 function computeClassStats(month, classesList){
   return classesList.map(c=>{
-    let daysTaken = 0, totalAbsences = 0, totalRetards = 0;
+    let daysTaken = 0, totalAbsences = 0, totalRetards = 0, totalNonJust = 0;
     const perStudent = {};
+    const perStudentNonJust = {};
     const perStudentRetard = {};
     const perDay = {};
     c.students.forEach(s=>{ perStudent[s.id] = 0; perStudentRetard[s.id] = 0; });
@@ -1596,9 +1656,14 @@ function computeClassStats(month, classesList){
       daysTaken++;
       totalAbsences += rec.absentIds.length;
       perDay[date] = rec.absentIds.length;
+      const justifiees = new Set(rec.justifiedIds || []);
       rec.absentIds.forEach(sid=>{
         if(perStudent[sid]===undefined) perStudent[sid]=0;
         perStudent[sid]++;
+        if(!justifiees.has(sid)){
+          perStudentNonJust[sid] = (perStudentNonJust[sid] || 0) + 1;
+          totalNonJust++;
+        }
       });
       (rec.lateIds || []).forEach(sid=>{
         if(perStudentRetard[sid]===undefined) perStudentRetard[sid]=0;
@@ -1608,7 +1673,7 @@ function computeClassStats(month, classesList){
     });
     const nbStudents = c.students.length || 1;
     const rate = daysTaken>0 ? (totalAbsences/(nbStudents*daysTaken))*100 : 0;
-    return { cls:c, daysTaken, totalAbsences, totalRetards, rate, perStudent, perStudentRetard, perDay };
+    return { cls:c, daysTaken, totalAbsences, totalRetards, totalNonJust, rate, perStudent, perStudentRetard, perStudentNonJust, perDay };
   });
 }
 
@@ -1670,7 +1735,7 @@ function renderStats(){
     <div class="stat-card">
       <div class="label">${escapeHtml(cs.cls.name)}</div>
       <div class="value ${cs.rate>=10?'rate-high':'rate-ok'}">${cs.daysTaken>0 ? cs.rate.toFixed(1)+'%' : '—'}</div>
-      <div class="small-note" style="margin:.2rem 0 0;">${cs.totalAbsences} absence${cs.totalAbsences>1?'s':''}${cs.totalRetards ? ` · ${cs.totalRetards} retard${cs.totalRetards>1?'s':''}` : ''} · ${cs.daysTaken} jour${cs.daysTaken>1?'s':''} d'appel</div>
+      <div class="small-note" style="margin:.2rem 0 0;">${cs.totalAbsences} absence${cs.totalAbsences>1?'s':''}${cs.totalAbsences ? ` (${cs.totalNonJust} non just.)` : ''}${cs.totalRetards ? ` · ${cs.totalRetards} retard${cs.totalRetards>1?'s':''}` : ''} · ${cs.daysTaken} jour${cs.daysTaken>1?'s':''} d'appel</div>
     </div>
   `).join('');
 
@@ -1699,12 +1764,13 @@ function renderStats(){
     cs.cls.students.forEach(s=>{
       const count = cs.perStudent[s.id] || 0;
       const retards = cs.perStudentRetard[s.id] || 0;
+      const nonJust = cs.perStudentNonJust[s.id] || 0;
       if(count>0 || retards>0){
-        studentRows.push({ className: cs.cls.name, name: s.name, count, retards });
+        studentRows.push({ className: cs.cls.name, name: s.name, count, nonJust, retards });
       }
     });
   });
-  studentRows.sort((a,b)=> (b.count - a.count) || (b.retards - a.retards));
+  studentRows.sort((a,b)=> (b.nonJust - a.nonJust) || (b.count - a.count) || (b.retards - a.retards));
 
   const studentTable = studentRows.length===0
     ? '<p class="empty">Aucune absence ni retard enregistré ce mois-ci.</p>'
@@ -1715,6 +1781,7 @@ function renderStats(){
           <th>Élève</th>
           ${ui.statClass==='ALL' ? '<th>Classe</th>' : ''}
           <th class="num">Absences</th>
+          <th class="num">dont non justifiées</th>
           <th class="num">Retards</th>
         </tr></thead>
         <tbody>
@@ -1723,6 +1790,7 @@ function renderStats(){
               <td>${escapeHtml(r.name)}</td>
               ${ui.statClass==='ALL' ? `<td>${escapeHtml(r.className)}</td>` : ''}
               <td class="num">${r.count}</td>
+              <td class="num" ${r.nonJust ? 'style="color:var(--absent); font-weight:600;"' : ''}>${r.count ? r.nonJust : '—'}</td>
               <td class="num">${r.retards || '—'}</td>
             </tr>
           `).join('')}
@@ -1772,24 +1840,24 @@ function exportMonthToPdf(month){
 
   const blocks = classStats.map(cs=>{
     const studentLines = Object.entries(cs.perStudent)
-      .map(([sid,count])=>({ name: (cs.cls.students.find(s=>s.id===sid)||{}).name || '', count }))
+      .map(([sid,count])=>({ name: (cs.cls.students.find(s=>s.id===sid)||{}).name || '', count, nonJust: cs.perStudentNonJust[sid] || 0 }))
       .filter(r=>r.count>0)
       .sort((a,b)=>b.count-a.count);
     return `
       <div class="pblock">
         <div class="pblock-head">
           <span class="pblock-name">${escapeHtml(cs.cls.name)}</span>
-          <span class="pblock-rate">${cs.daysTaken>0 ? cs.rate.toFixed(1)+'%' : 'aucun appel'} ${cs.daysTaken>0 ? `· ${cs.totalAbsences} absence${cs.totalAbsences>1?'s':''}${cs.totalRetards ? ` · ${cs.totalRetards} retard${cs.totalRetards>1?'s':''}` : ''} · ${cs.daysTaken} j.` : ''}</span>
+          <span class="pblock-rate">${cs.daysTaken>0 ? cs.rate.toFixed(1)+'%' : 'aucun appel'} ${cs.daysTaken>0 ? `· ${cs.totalAbsences} absence${cs.totalAbsences>1?'s':''}${cs.totalAbsences ? ` (${cs.totalNonJust} NJ)` : ''}${cs.totalRetards ? ` · ${cs.totalRetards} retard${cs.totalRetards>1?'s':''}` : ''} · ${cs.daysTaken} j.` : ''}</span>
         </div>
         ${buildMiniCalendar(month, cs.perDay)}
-        ${studentLines.length ? `<div class="pstudents">${studentLines.map(r=>`<span>${escapeHtml(r.name)} <b>${r.count}</b></span>`).join('')}</div>` : '<div class="pstudents pempty">Aucune absence</div>'}
+        ${studentLines.length ? `<div class="pstudents">${studentLines.map(r=>`<span>${escapeHtml(r.name)} <b>${r.count}</b>${r.nonJust ? `<i> (${r.nonJust} NJ)</i>` : ''}</span>`).join('')}</div>` : '<div class="pstudents pempty">Aucune absence</div>'}
       </div>
     `;
   }).join('');
 
   document.getElementById('print-area').innerHTML = `
     <div class="pheader">
-      <span>Cahier d'appel</span>
+      <span>Cahier d'appel <span style="font-weight:400;">&mdash; NJ&nbsp;: absences non justifiées</span></span>
       <span>${monthLabel}</span>
     </div>
     <div class="pgrid">${blocks}</div>
