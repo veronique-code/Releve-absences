@@ -1,9 +1,35 @@
-const CACHE_NAME = 'espace-direction-v8';
+/* =========================================================================
+   Espace direction — service worker
+   -------------------------------------------------------------------------
+   Deux rôles : garder les pages consultables hors connexion, et afficher les
+   notifications envoyées par le script « Espace direction — tâches ».
+   ========================================================================= */
+
+// Notifications. Le try/catch évite qu'une coupure réseau au moment de
+// l'installation empêche le reste du service worker de fonctionner.
+try{
+  importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+  importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
+  firebase.initializeApp({
+    apiKey: "AIzaSyDovrxndeWXBs-ZA_-QQYw6983D5bQ6kgo",
+    authDomain: "sorties-scolaires.firebaseapp.com",
+    projectId: "sorties-scolaires",
+    storageBucket: "sorties-scolaires.firebasestorage.app",
+    messagingSenderId: "690408502155",
+    appId: "1:690408502155:web:d0d5cfc618e64d5028f58e"
+  });
+  firebase.messaging();
+}catch(e){
+  console.warn("Notifications indisponibles :", e);
+}
+
+const CACHE_NAME = 'espace-direction-v9';
 const ASSETS = [
   './index.html',
   './cahier-appel.html',
   './sorties.html',
   './demandes.html',
+  './comportement.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'

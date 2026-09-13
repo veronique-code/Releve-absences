@@ -381,6 +381,7 @@ body:not(.ed-ready){overflow:hidden}
 <div class="scrim" id="menuScrim">
   <div class="sheet" role="dialog" aria-modal="true" aria-label="Menu">
     <h2>Menu</h2>
+    <button class="menu-item" id="notifBtn">Notifications sur cet appareil</button>
     <button class="menu-item" id="exportBtn">Exporter en CSV (tableur)</button>
     <button class="menu-item" id="purgeBtn">Archiver les demandes terminées</button>
     <div class="actions"><button class="btn ghost" id="menuClose" style="flex:1">Fermer</button></div>
@@ -598,6 +599,7 @@ async function initFirebase(){
   catch(e){ console.warn("Persistance hors ligne indisponible (plusieurs onglets ouverts ?)", e); }
 
   const col = fs.collection(db, COLLECTION);
+  fbApp = app; fbDb = db; fbFs = fs;   // servent à l'inscription aux notifications
 
   store = {
     start(){
@@ -996,10 +998,79 @@ document.getElementById("addBtn").onclick = () => ouvrirForm(null);
 document.getElementById("formScrim").onclick = e => { if(e.target.id === "formScrim") fermerForm(); };
 
 /* =========================================================================
-   7. MENU
+   7. NOTIFICATIONS
+   -------------------------------------------------------------------------
+   Chaque appareil s'inscrit une fois : le navigateur délivre un identifiant,
+   déposé dans la collection « push ». Le script « Espace direction — tâches »
+   s'en sert chaque matin. L'identifiant ne dit rien de vous : il désigne une
+   installation de navigateur, et se révoque en retirant l'autorisation.
+   ========================================================================= */
+const VAPID = "BMHO9E17V6HhVXGrVCwyMKn0OFMmek4vzweDmGWqsX3q4Gh7_yK9k-hERzA6Bmqb5_JsgLLuk3LYqgx_MSS98JY";
+let fbApp = null, fbDb = null, fbFs = null;
+
+function nomAppareil(){
+  const ua = navigator.userAgent;
+  const systeme = /Android/i.test(ua) ? "Android"
+                : /iPhone|iPad/i.test(ua) ? "iPhone ou iPad"
+                : /Mac/i.test(ua) ? "Mac"
+                : /Windows/i.test(ua) ? "Windows" : "Appareil";
+  const nav = /Edg\//i.test(ua) ? "Edge"
+            : /Chrome/i.test(ua) ? "Chrome"
+            : /Firefox/i.test(ua) ? "Firefox"
+            : /Safari/i.test(ua) ? "Safari" : "navigateur";
+  return systeme + " — " + nav;
+}
+
+function majBoutonNotif(){
+  const b = document.getElementById("notifBtn");
+  const inscrit = localStorage.getItem("jeanaicard_push");
+  if(!("Notification" in window)){ b.textContent = "Notifications non gérées ici"; return; }
+  if(Notification.permission === "granted" && inscrit){
+    b.textContent = "✓ Notifications activées sur cet appareil";
+  }else if(Notification.permission === "denied"){
+    b.textContent = "Notifications bloquées par le navigateur";
+  }else{
+    b.textContent = "Activer les notifications sur cet appareil";
+  }
+}
+
+document.getElementById("notifBtn").onclick = async () => {
+  const b = document.getElementById("notifBtn");
+  if(!("Notification" in window) || !("serviceWorker" in navigator)){
+    b.textContent = "Notifications non gérées par ce navigateur"; return;
+  }
+  if(Notification.permission === "denied"){
+    b.textContent = "Débloquez-les via le cadenas de la barre d'adresse"; return;
+  }
+  if(!fbDb){ b.textContent = "Connexion en cours, réessayez dans un instant"; return; }
+
+  b.textContent = "Autorisation en cours…";
+  try{
+    if(await Notification.requestPermission() !== "granted"){ majBoutonNotif(); return; }
+
+    const reg = await navigator.serviceWorker.register("service-worker.js", { scope: "./" });
+    await navigator.serviceWorker.ready;
+    const M = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js");
+    const jeton = await M.getToken(M.getMessaging(fbApp),
+      { vapidKey: VAPID, serviceWorkerRegistration: reg });
+    if(!jeton) throw new Error("Aucun identifiant délivré");
+
+    await fbFs.setDoc(fbFs.doc(fbDb, "push", jeton), {
+      jeton: jeton, appareil: nomAppareil(), maj: new Date().toISOString()
+    });
+    localStorage.setItem("jeanaicard_push", jeton);
+    majBoutonNotif();
+  }catch(e){
+    console.error(e);
+    b.textContent = "Activation impossible — réessayez";
+  }
+};
+
+/* =========================================================================
+   8. MENU
    ========================================================================= */
 const menuScrim = document.getElementById("menuScrim");
-document.getElementById("menuBtn").onclick = () => menuScrim.classList.add("open");
+document.getElementById("menuBtn").onclick = () => { majBoutonNotif(); menuScrim.classList.add("open"); };
 document.getElementById("menuClose").onclick = () => menuScrim.classList.remove("open");
 menuScrim.onclick = e => { if(e.target.id === "menuScrim") menuScrim.classList.remove("open"); };
 
@@ -1031,7 +1102,7 @@ document.addEventListener("keydown", e => {
 });
 
 /* =========================================================================
-   8. MANIFESTE (écran d'accueil) + DÉMARRAGE
+   9. MANIFESTE (écran d'accueil) + DÉMARRAGE
    ========================================================================= */
 const icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23A896DC'/%3E%3Cpath d='M144 264l72 72 152-168' stroke='%23FFFFFF' stroke-width='56' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E";
 const manifest = {name:"Demandes — École Jean Aicard", short_name:"Demandes", display:"standalone",
@@ -1043,6 +1114,13 @@ ml.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)],{type:"applica
 document.head.appendChild(ml);
 
 remplirListes();
+majBoutonNotif();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js', { scope: './' }).catch(()=>{});
+  });
+}
 
 if(LOCAL_ONLY){
   document.getElementById("notice").innerHTML =
