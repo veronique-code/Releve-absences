@@ -219,14 +219,15 @@ label{display:block;font-size:12px;letter-spacing:.09em;text-transform:uppercase
 }
 .rappel-x:active{background:rgba(69,59,98,.08)}
 
-/* ---------- bouton Google Agenda ---------- */
-.btn-agenda{
+/* ---------- bouton Google Tasks ---------- */
+.btn-taches{
   width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
   background:var(--surface);border:1px solid var(--line);border-radius:11px;
   padding:11px 12px;font-size:15px;font-weight:600;color:var(--ink);cursor:pointer;
 }
-.btn-agenda:active{background:#F3EFFA}
-.agenda-aide{font-size:12px;color:var(--muted);margin:6px 2px 0;line-height:1.4}
+.btn-taches:active{background:#F3EFFA}
+.btn-taches:disabled{opacity:.6;cursor:default}
+.taches-aide{font-size:12px;color:var(--muted);margin:6px 2px 0;line-height:1.4}
 
 .retour-hub{
   display:inline-flex;align-items:center;gap:.45rem;
@@ -356,9 +357,9 @@ body:not(.ed-ready){overflow:hidden}
       </label>
     </div>
 
-    <div class="field" id="agendaRow" style="display:none">
-      <button type="button" class="btn-agenda" id="agendaBtn">📅 Ajouter à Google Agenda</button>
-      <p class="agenda-aide">Crée un événement « journée entière » à la date d'échéance, avec les rappels habituels de votre agenda. Si l'échéance change ensuite, pensez à déplacer l'événement.</p>
+    <div class="field" id="tachesRow" style="display:none">
+      <button type="button" class="btn-taches" id="tachesBtn">✓ Ajouter à mes tâches Google</button>
+      <p class="taches-aide" id="tachesAide">La demande rejoint tout de suite la liste « Demandes — Jean Aicard » de Google Tasks. Sans ce bouton, elle y arrivera d'elle-même le lendemain matin.</p>
     </div>
 
     <div class="field">
@@ -861,7 +862,9 @@ function ouvrirForm(id){
   statutChoisi = t?.statut || "À faire";
   majStatut();
   document.getElementById("deleteRow").style.display = t ? "flex" : "none";
-  majAgenda();
+  document.getElementById("tachesAide").textContent =
+    "La demande rejoint tout de suite la liste « Demandes — Jean Aicard » de Google Tasks. Sans ce bouton, elle y arrivera d'elle-même le lendemain matin.";
+  majTaches();
   document.getElementById("formScrim").classList.add("open");
   if(!t) setTimeout(()=>document.getElementById("f-titre").focus(), 60);
 }
@@ -882,11 +885,9 @@ function signalerEchec(message){
   zone.innerHTML = `<div class="notice"><b>Enregistrement impossible.</b> ${message}</div>`;
 }
 
-document.getElementById("saveBtn").onclick = () => {
-  const titre = document.getElementById("f-titre").value.trim();
-  if(!titre){ document.getElementById("f-titre").focus(); return; }
-  const data = {
-    titre,
+function lireForm(){
+  return {
+    titre:        document.getElementById("f-titre").value.trim(),
     destinataire: document.getElementById("f-qui").value,
     categorie:    document.getElementById("f-cat").value,
     echeance:     document.getElementById("f-date").value,
@@ -895,6 +896,11 @@ document.getElementById("saveBtn").onclick = () => {
     statut:       statutChoisi,
     maj:          new Date().toISOString()
   };
+}
+
+document.getElementById("saveBtn").onclick = () => {
+  const data = lireForm();
+  if(!data.titre){ document.getElementById("f-titre").focus(); return; }
   const id = editId;
   fermerForm();
   avecStore(s => id ? s.update(id, data) : s.add({...data, creation:new Date().toISOString()}))
@@ -907,40 +913,82 @@ document.getElementById("deleteBtn").onclick = () => {
     avecStore(s => s.remove(id)).catch(err => { console.error(err); signalerEchec("La suppression n'a pas abouti."); });
   }
 };
-/* ---------- Google Agenda ---------- */
-function majAgenda(){
-  document.getElementById("agendaRow").style.display =
-    document.getElementById("f-date").value ? "block" : "none";
-}
-document.getElementById("f-date").addEventListener("input", majAgenda);
-document.getElementById("f-date").addEventListener("change", majAgenda);
+/* =========================================================================
+   GOOGLE TASKS
+   -------------------------------------------------------------------------
+   Le bouton envoie la demande au petit script Google, qui l'inscrit dans la
+   liste « Demandes — Jean Aicard ». Le même script repasse chaque matin pour
+   remettre la liste en accord avec les demandes : ce bouton ne sert donc qu'à
+   ne pas attendre le lendemain.
+   ========================================================================= */
+const TACHES_URL   = "https://script.google.com/macros/s/AKfycbyBTVlM-YCDdziX7ovXbjG20Llxxv5NanJ71lTEyVDB41v8k4J4DOs-r7gZX0jlaENTMQ/exec";
+const TACHES_JETON = "BTKDlSXyXrpRBNT4B2o76t36m7HQ";
 
-function lienAgenda(titre, echeance, destinataire, categorie){
-  const f = new Date(echeance + "T00:00:00");
-  f.setDate(f.getDate() + 1); // date de fin exclue pour un événement « journée entière »
-  const aaaammjj = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`;
-  const debut = echeance.replaceAll("-", "");
-  const details = [
-    destinataire ? `Pour qui : ${destinataire}` : "",
-    categorie ? `Domaine : ${categorie}` : "",
-    "",
-    "Suivi dans l'Espace direction :",
-    new URL("demandes.html", location.href).href
-  ].filter((x, i) => x || i === 2).join("\n");
-  return "https://calendar.google.com/calendar/render?action=TEMPLATE"
-    + "&text=" + encodeURIComponent(`Échéance — ${titre}`)
-    + "&dates=" + debut + "/" + aaaammjj(f)
-    + "&details=" + encodeURIComponent(details);
+function majTaches(){
+  const avecDate = !!document.getElementById("f-date").value;
+  document.getElementById("tachesRow").style.display = avecDate ? "block" : "none";
+  const b = document.getElementById("tachesBtn");
+  b.disabled = false;
+  b.textContent = editId ? "✓ Ajouter à mes tâches Google"
+                         : "✓ Enregistrer et ajouter à mes tâches Google";
+}
+document.getElementById("f-date").addEventListener("input", majTaches);
+document.getElementById("f-date").addEventListener("change", majTaches);
+
+/* Repli : si le navigateur refuse l'appel direct, on ouvre le script dans un
+   onglet, ce qui revient au même. */
+function lienTacheSecours(id, d){
+  const p = new URLSearchParams({
+    jeton: TACHES_JETON, id: id, titre: d.titre, echeance: d.echeance || "",
+    qui: d.destinataire || "", cat: d.categorie || "",
+    notes: d.remarques || "", urgent: d.urgent ? "1" : "0"
+  });
+  return TACHES_URL + "?" + p.toString();
 }
 
-document.getElementById("agendaBtn").onclick = () => {
-  const titre = document.getElementById("f-titre").value.trim();
-  const echeance = document.getElementById("f-date").value;
-  if(!titre){ document.getElementById("f-titre").focus(); return; }
-  if(!echeance) return;
-  window.open(lienAgenda(titre, echeance,
-    document.getElementById("f-qui").value,
-    document.getElementById("f-cat").value), "_blank", "noopener");
+async function envoyerVersTaches(id, d){
+  const rep = await fetch(TACHES_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ jeton: TACHES_JETON, demande: { ...d, id } })
+  });
+  const r = await rep.json();
+  if(!r.ok) throw new Error(r.message || "Refus du script");
+}
+
+document.getElementById("tachesBtn").onclick = async () => {
+  const d = lireForm();
+  if(!d.titre){ document.getElementById("f-titre").focus(); return; }
+  if(!d.echeance) return;
+
+  const b = document.getElementById("tachesBtn");
+  b.disabled = true; b.textContent = "Envoi en cours…";
+
+  try{
+    // Une demande encore jamais enregistrée n'a pas d'identifiant : on
+    // l'enregistre d'abord, sinon la synchronisation du matin créerait un doublon.
+    let id = editId;
+    if(!id){
+      const ref = await avecStore(s => s.add({ ...d, creation: new Date().toISOString() }));
+      id = ref && ref.id;
+      if(!id) throw new Error("Enregistrement incomplet");
+      editId = id;
+    }else{
+      await avecStore(s => s.update(id, d));
+    }
+
+    await envoyerVersTaches(id, d);
+    b.textContent = "✓ Ajoutée à vos tâches Google";
+    setTimeout(fermerForm, 900);
+  }catch(err){
+    console.error(err);
+    b.disabled = false;
+    b.textContent = "✓ Ajouter à mes tâches Google";
+    const aide = document.getElementById("tachesAide");
+    aide.innerHTML = editId
+      ? `L'envoi direct n'a pas abouti. <a href="${lienTacheSecours(editId, d)}" target="_blank" rel="noopener">Ouvrir le script dans un onglet</a> pour ajouter la tâche.`
+      : "L'envoi n'a pas abouti. Vérifiez la connexion, puis réessayez.";
+  }
 };
 
 document.getElementById("cancelBtn").onclick = fermerForm;
