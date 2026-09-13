@@ -197,6 +197,37 @@ label{display:block;font-size:12px;letter-spacing:.09em;text-transform:uppercase
   border-radius:12px;padding:14px;margin-bottom:9px;font-size:15.5px;cursor:pointer;
 }
 
+/* ---------- rappel des échéances ---------- */
+.rappel{
+  display:flex;align-items:center;gap:10px;margin:12px 0 0;
+  background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--teal);
+  border-radius:12px;padding:10px 8px 10px 12px;
+}
+.rappel.has-late{border-left-color:var(--terracotta);background:#FFF8F5}
+.rappel-txt{flex:1;min-width:0;font-size:13.5px;color:var(--ink-soft);line-height:1.35}
+.rappel-txt span{white-space:nowrap}
+.rappel-txt b{display:block;font-size:14.5px;color:var(--ink);margin-bottom:1px}
+.rappel-txt .r-late{color:var(--terracotta);font-weight:600}
+.rappel-txt .r-today{color:var(--teal);font-weight:600}
+.rappel-voir{
+  flex:none;border:0;border-radius:10px;background:var(--ink);color:#fff;
+  padding:8px 12px;font-size:13.5px;font-weight:600;cursor:pointer;
+}
+.rappel-x{
+  flex:none;border:0;background:transparent;color:var(--muted);
+  width:32px;height:32px;border-radius:8px;font-size:18px;cursor:pointer;
+}
+.rappel-x:active{background:rgba(69,59,98,.08)}
+
+/* ---------- bouton Google Agenda ---------- */
+.btn-agenda{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+  background:var(--surface);border:1px solid var(--line);border-radius:11px;
+  padding:11px 12px;font-size:15px;font-weight:600;color:var(--ink);cursor:pointer;
+}
+.btn-agenda:active{background:#F3EFFA}
+.agenda-aide{font-size:12px;color:var(--muted);margin:6px 2px 0;line-height:1.4}
+
 .retour-hub{
   display:inline-flex;align-items:center;gap:.45rem;
   padding:7px 14px 7px 11px;
@@ -275,6 +306,7 @@ body:not(.ed-ready){overflow:hidden}
 <div class="wrap">
   <div class="hub-bar" style="padding-left:0;padding-right:0;"><a class="retour-hub" href="./index.html"><span class="fl">←</span> Espace direction</a></div>
   <div id="notice"></div>
+  <div id="rappel"></div>
 
   <div class="chips" id="chips"></div>
 
@@ -322,6 +354,11 @@ body:not(.ed-ready){overflow:hidden}
       <label class="check" style="text-transform:none;letter-spacing:0;font-size:14.5px;color:var(--ink-soft)">
         <input type="checkbox" id="f-urgent"> Signaler comme urgent
       </label>
+    </div>
+
+    <div class="field" id="agendaRow" style="display:none">
+      <button type="button" class="btn-agenda" id="agendaBtn">📅 Ajouter à Google Agenda</button>
+      <p class="agenda-aide">Crée un événement « journée entière » à la date d'échéance, avec les rappels habituels de votre agenda. Si l'échéance change ensuite, pensez à déplacer l'événement.</p>
     </div>
 
     <div class="field">
@@ -680,6 +717,7 @@ function renderChips(){
 
 function render(){
   renderChips();
+  renderRappel();
   const items = visibles();
   const list = document.getElementById("list");
 
@@ -705,6 +743,61 @@ function render(){
 
   list.querySelectorAll(".card").forEach(c => c.onclick = () => ouvrirForm(c.dataset.id));
 }
+
+/* ---------- Rappel des échéances (bandeau + pastille sur l'icône) ---------- */
+let rappelMasque = false;
+
+function compterRappels(){
+  let retard = 0, auj = 0, demain = 0;
+  taches.forEach(t => {
+    if(t.statut === "Terminée") return;
+    const n = daysLeft(t.echeance);
+    if(n === null) return;
+    if(n < 0) retard++;
+    else if(n === 0) auj++;
+    else if(n === 1) demain++;
+  });
+  return { retard, auj, demain };
+}
+
+/* Pastille chiffrée sur l'icône de l'application installée (si l'appareil le permet). */
+function majPastille(n){
+  if(!("setAppBadge" in navigator)) return;
+  (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
+}
+
+function renderRappel(){
+  const { retard, auj, demain } = compterRappels();
+  majPastille(retard + auj);
+  const zone = document.getElementById("rappel");
+  if(rappelMasque || !(retard || auj || demain)){ zone.innerHTML = ""; return; }
+
+  const morceaux = [];
+  if(retard) morceaux.push(`<span class="r-late">${retard} en retard</span>`);
+  if(auj)    morceaux.push(`<span class="r-today">${auj} pour aujourd'hui</span>`);
+  if(demain) morceaux.push(`<span>${demain} pour demain</span>`);
+  const total = retard + auj + demain;
+
+  zone.innerHTML = `<div class="rappel ${retard ? "has-late" : ""}" role="status">
+    <div class="rappel-txt"><b>${total} demande${total > 1 ? "s" : ""} à surveiller</b>${morceaux.join(" · ")}</div>
+    <button class="rappel-voir" id="rappelVoir">Voir</button>
+    <button class="rappel-x" id="rappelX" aria-label="Masquer le rappel">×</button>
+  </div>`;
+
+  document.getElementById("rappelX").onclick = () => { rappelMasque = true; renderRappel(); };
+  document.getElementById("rappelVoir").onclick = () => {
+    filtre = "a-traiter"; recherche = ""; filtreQui = "";
+    document.getElementById("search").value = "";
+    document.getElementById("who").value = "";
+    render();
+    const cible = document.querySelector(".card.late, .card.today") || document.getElementById("list");
+    cible.scrollIntoView({ behavior:"smooth", block:"center" });
+  };
+}
+
+/* Au passage de minuit, « demain » devient « aujourd'hui » : on rafraîchit régulièrement. */
+setInterval(() => render(), 10 * 60 * 1000);
+document.addEventListener("visibilitychange", () => { if(!document.hidden) render(); });
 
 function carte(t){
   const n = daysLeft(t.echeance);
@@ -768,6 +861,7 @@ function ouvrirForm(id){
   statutChoisi = t?.statut || "À faire";
   majStatut();
   document.getElementById("deleteRow").style.display = t ? "flex" : "none";
+  majAgenda();
   document.getElementById("formScrim").classList.add("open");
   if(!t) setTimeout(()=>document.getElementById("f-titre").focus(), 60);
 }
@@ -813,6 +907,42 @@ document.getElementById("deleteBtn").onclick = () => {
     avecStore(s => s.remove(id)).catch(err => { console.error(err); signalerEchec("La suppression n'a pas abouti."); });
   }
 };
+/* ---------- Google Agenda ---------- */
+function majAgenda(){
+  document.getElementById("agendaRow").style.display =
+    document.getElementById("f-date").value ? "block" : "none";
+}
+document.getElementById("f-date").addEventListener("input", majAgenda);
+document.getElementById("f-date").addEventListener("change", majAgenda);
+
+function lienAgenda(titre, echeance, destinataire, categorie){
+  const f = new Date(echeance + "T00:00:00");
+  f.setDate(f.getDate() + 1); // date de fin exclue pour un événement « journée entière »
+  const aaaammjj = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`;
+  const debut = echeance.replaceAll("-", "");
+  const details = [
+    destinataire ? `Pour qui : ${destinataire}` : "",
+    categorie ? `Domaine : ${categorie}` : "",
+    "",
+    "Suivi dans l'Espace direction :",
+    new URL("demandes.html", location.href).href
+  ].filter((x, i) => x || i === 2).join("\n");
+  return "https://calendar.google.com/calendar/render?action=TEMPLATE"
+    + "&text=" + encodeURIComponent(`Échéance — ${titre}`)
+    + "&dates=" + debut + "/" + aaaammjj(f)
+    + "&details=" + encodeURIComponent(details);
+}
+
+document.getElementById("agendaBtn").onclick = () => {
+  const titre = document.getElementById("f-titre").value.trim();
+  const echeance = document.getElementById("f-date").value;
+  if(!titre){ document.getElementById("f-titre").focus(); return; }
+  if(!echeance) return;
+  window.open(lienAgenda(titre, echeance,
+    document.getElementById("f-qui").value,
+    document.getElementById("f-cat").value), "_blank", "noopener");
+};
+
 document.getElementById("cancelBtn").onclick = fermerForm;
 document.getElementById("addBtn").onclick = () => ouvrirForm(null);
 document.getElementById("formScrim").onclick = e => { if(e.target.id === "formScrim") fermerForm(); };

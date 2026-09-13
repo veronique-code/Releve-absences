@@ -175,6 +175,16 @@ body{
 .record.rec-demandes .go{ color:var(--corail-fonce); }
 .record.rec-comportement .go{ color:var(--prune); }
 .record .go .arrow{ transition:transform .15s ease; }
+
+/* Pastille d'échéances sur la carte Demandes & suivi */
+.rappel-hub{
+  position:absolute;top:.85rem;right:1rem;
+  font-size:.72rem;font-weight:600;line-height:1;
+  padding:.32rem .62rem;border-radius:999px;
+  color:var(--menthe-fonce);background:#E3F5EE;border:1px solid #BEE5D6;
+}
+.rappel-hub.late{ color:var(--corail-fonce);background:#FDECE4;border-color:#F5CDBC; }
+.rappel-hub[hidden]{ display:none; }
 .record:hover .go .arrow{ transform:translateX(3px); }
 
 .meta-row{
@@ -310,6 +320,7 @@ body:not(.ed-ready){overflow:hidden}
       <a class="record rec-demandes" href="./demandes.html">
         <span class="stripe"></span>
         <span class="tab">Au fil des jours</span>
+        <span class="rappel-hub" id="rappel-demandes" hidden></span>
         <h2>Demandes &amp; suivi</h2>
         <p class="desc">Notez ce qu'il y a à faire, pour qui et pour quand&nbsp;: échéances, état d'avancement et remarques.</p>
         <span class="go">Ouvrir le suivi <span class="arrow">→</span></span>
@@ -415,6 +426,34 @@ await new Promise(resolve => {
       gbtn.disabled = false;
     }
   });});
+
+/* --- Pastille « Demandes & suivi » : demandes en retard ou du jour ---------- */
+(async () => {
+  try{
+    const fs = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
+    const snap = await fs.getDocs(fs.collection(fs.getFirestore(auth.app), "demandes"));
+    const auj = new Date(); auj.setHours(0,0,0,0);
+    let retard = 0, jour = 0;
+    snap.forEach(d => {
+      const t = d.data();
+      if(t.statut === "Terminée" || !t.echeance) return;
+      const n = Math.round((new Date(t.echeance + "T00:00:00") - auj) / 86400000);
+      if(n < 0) retard++; else if(n === 0) jour++;
+    });
+    const el = document.getElementById("rappel-demandes");
+    const morceaux = [];
+    if(retard) morceaux.push(`${retard} en retard`);
+    if(jour)   morceaux.push(`${jour} aujourd'hui`);
+    if(morceaux.length){
+      el.textContent = morceaux.join(" · ");
+      el.classList.toggle("late", retard > 0);
+      el.hidden = false;
+    }
+    if("setAppBadge" in navigator){
+      (retard + jour ? navigator.setAppBadge(retard + jour) : navigator.clearAppBadge()).catch(()=>{});
+    }
+  }catch(e){ console.warn("Pastille des demandes indisponible", e); }
+})();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
