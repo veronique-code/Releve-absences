@@ -121,6 +121,26 @@ select{appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns
 .obs-foot button{background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:.78rem;padding:0}
 .grav{display:inline-block; margin-left:.4rem; font-size:.75rem; color:var(--incident)}
 
+/* ---------- Mesures rattachées à un incident ---------- */
+.mesures{margin-top:.6rem; border-top:1px dashed var(--line); padding-top:.5rem}
+.mesures-t{font-size:.78rem; font-weight:600; color:var(--mesure); margin-bottom:.25rem}
+.mes{display:flex; gap:.4rem; align-items:baseline; padding:.15rem 0; font-size:.85rem}
+.mes-p{color:var(--mesure)}
+.mes-c{color:var(--mesure); font-weight:500}
+.mes-m{color:var(--muted); font-size:.75rem}
+.mes-x{background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:.75rem;padding:0;margin-left:auto}
+.mes-txt{white-space:pre-wrap}
+.add-mes{margin-top:.45rem}
+.lien-inc{font-size:.78rem; color:var(--muted); margin:.3rem 0 0}
+
+/* ---------- Cases à cocher ---------- */
+.checks{display:grid; grid-template-columns:1fr 1fr; gap:.1rem .8rem}
+@media (max-width:560px){.checks{grid-template-columns:1fr}}
+.checks label{display:flex; align-items:center; gap:.5rem; margin:0; padding:.25rem 0;
+  font-size:.88rem; color:var(--ink); font-weight:400}
+.checks input[type=checkbox]{width:auto; margin:0; flex:none}
+.hint{font-size:.78rem; color:var(--muted); margin:.4rem 0 0}
+
 .empty{color:var(--muted); text-align:center; padding:2rem 1rem}
 .empty p{margin:.3rem 0}
 
@@ -264,6 +284,10 @@ body:not(.ed-ready){overflow:hidden}
       <label for="f-cat">Motif</label>
       <select id="f-cat"></select>
     </div>
+    <div class="field" id="wrap-lien" style="display:none">
+      <label for="f-lien">Se rapporte à l'incident</label>
+      <select id="f-lien"></select>
+    </div>
     <div class="row field" id="wrap-incident">
       <div>
         <label for="f-lieu">Lieu</label>
@@ -285,6 +309,12 @@ body:not(.ed-ready){overflow:hidden}
     <div class="field">
       <label for="f-txt">Description des faits</label>
       <textarea id="f-txt" placeholder="Faits constatés, en termes factuels."></textarea>
+    </div>
+    <div class="field" id="wrap-mesures">
+      <label>Mesures prises</label>
+      <div class="checks" id="f-mesures"></div>
+      <p class="hint">Cochez ce qui a déjà été fait : ces mesures seront rattachées à cet incident.
+      Vous pourrez en ajouter d'autres plus tard, directement sur l'incident.</p>
     </div>
     <button class="btn" id="f-save" style="width:100%">Enregistrer l'observation</button>
     <p class="msg" id="f-msg" hidden></p>
@@ -586,6 +616,15 @@ const elevesDe = c => {
 const eleveById = id => elevesAppel.find(e => e.id === id) || state.eleves.find(e => e.id === id);
 const nomEleve = o => (eleveById(o.eleveId) || {}).nom || o.eleveNom || "";
 
+// Mesures rattachées à un incident, de la plus ancienne à la plus récente.
+const mesuresDe = incId => state.obs
+  .filter(o => o.type === "mesure" && o.incidentId === incId)
+  .sort((a,b) => a.date.localeCompare(b.date) || (a.saisi||0) - (b.saisi||0));
+// Incident auquel une mesure se rapporte (null si mesure isolée).
+const incidentDe = o => (o.type === "mesure" && o.incidentId)
+  ? state.obs.find(x => x.id === o.incidentId) || null : null;
+const estMesureLiee = o => o.type === "mesure" && !!o.incidentId;
+
 /* =========================================================
    Accès réservé — authentification Firebase
    Aucune donnée n'est lue tant que la connexion n'est pas établie.
@@ -700,6 +739,8 @@ function initApp(){
   remplirClasses();
   fillSelect($("#f-lieu"), LIEUX);
   $("#f-date").value = today();
+  $("#f-mesures").innerHTML = MOTIFS.mesure.filter(m => m !== "Autre")
+    .map(m => `<label><input type="checkbox" value="${esc(m)}"> ${esc(m)}</label>`).join("");
   majMotifs();
 
   $$("#type-seg button").forEach(b => b.onclick = () => {
@@ -723,6 +764,7 @@ function initApp(){
   }
   $("#f-classe").onchange = () => choisirClasse($("#f-classe").value);
   $("#s-classe").onchange = () => choisirClasse($("#s-classe").value);
+  $("#f-eleve").onchange = () => { if (typeCourant === "mesure") majLien(); };
   $("#s-eleve").onchange = renderSynthese;
   $("#e-classe").onchange = () => choisirClasse($("#e-classe").value);
   [ "#j-classe", "#j-type", "#j-du", "#j-au" ].forEach(s => $(s).onchange = renderJournal);
@@ -737,6 +779,21 @@ function initApp(){
 function majMotifs(){
   fillSelect($("#f-cat"), MOTIFS[typeCourant]);
   $("#wrap-incident").style.display = typeCourant === "incident" ? "flex" : "none";
+  $("#wrap-mesures").style.display  = typeCourant === "incident" ? "block" : "none";
+  $("#wrap-lien").style.display     = typeCourant === "mesure"   ? "block" : "none";
+  $("#f-txt").placeholder = typeCourant === "mesure"
+    ? "Précisions sur la mesure (facultatif)."
+    : "Faits constatés, en termes factuels.";
+  if (typeCourant === "mesure") majLien();
+}
+
+// Liste des incidents de l'élève choisi, pour rattacher une mesure.
+function majLien(){
+  const id = $("#f-eleve").value;
+  const l = state.obs.filter(o => o.type === "incident" && o.eleveId === id)
+    .sort(triDate).map(o => ({ v:o.id, l: frDate(o.date) + " — " + o.cat }));
+  fillSelect($("#f-lien"), l, { placeholder: l.length
+    ? "Aucun incident précis" : "Aucun incident enregistré pour cet élève" });
 }
 function majEleves(selClasse, selEleve, placeholder){
   const list = elevesDe(selClasse.value).map(e => ({ v:e.id, l:e.nom }));
@@ -751,21 +808,42 @@ function ajouterObs(){
   const eleveId = $("#f-eleve").value;
   const txt = $("#f-txt").value.trim();
   if (!eleveId) { alert("Sélectionnez un élève. Ajoutez-le d'abord dans l'onglet Élèves si besoin."); return; }
-  if (!txt) { alert("Décrivez les faits avant d'enregistrer."); return; }
-  state.obs.push({
-    id: uid(), date: $("#f-date").value || today(), eleveId,
+  if (!txt && typeCourant !== "mesure") { alert("Décrivez les faits avant d'enregistrer."); return; }
+
+  const commun = {
+    date: $("#f-date").value || today(), eleveId,
     eleveNom: (eleveById(eleveId) || {}).nom || "",
-    classe: $("#f-classe").value, type: typeCourant, cat: $("#f-cat").value,
+    classe: $("#f-classe").value, auteur: moi
+  };
+  const princ = Object.assign({}, commun, {
+    id: uid(), type: typeCourant, cat: $("#f-cat").value,
     lieu: typeCourant === "incident" ? $("#f-lieu").value : "",
     grav: typeCourant === "incident" ? +$("#f-grav").value : null,
-    txt, auteur: moi, saisi: Date.now()
+    incidentId: typeCourant === "mesure" ? ($("#f-lien").value || "") : "",
+    txt, saisi: Date.now()
   });
+  state.obs.push(princ);
+
+  // Mesures cochées sur un incident : enregistrées rattachées à cet incident.
+  let cochees = [];
+  if (typeCourant === "incident") {
+    cochees = $$("#f-mesures input:checked").map(c => c.value);
+    cochees.forEach((m, i) => state.obs.push(Object.assign({}, commun, {
+      id: uid(), type: "mesure", cat: m, lieu: "", grav: null,
+      incidentId: princ.id, txt: "", saisi: Date.now() + 1 + i
+    })));
+  }
+
   renderAll();
   message("f-msg", "Enregistrement…", true);
   save().then(ok => {
     if (ok) {
       $("#f-txt").value = "";
-      message("f-msg", "Observation enregistrée.", true);
+      $$("#f-mesures input").forEach(c => c.checked = false);
+      if (typeCourant === "mesure") majLien();
+      message("f-msg", cochees.length
+        ? "Incident enregistré, avec " + cochees.length + " mesure" + (cochees.length > 1 ? "s rattachées." : " rattachée.")
+        : "Observation enregistrée.", true);
     } else {
       message("f-msg", "Observation non enregistrée — le texte saisi est conservé, recommencez.", false);
     }
@@ -775,29 +853,71 @@ function ajouterObs(){
 function supprimerObs(id){
   const o = state.obs.find(x => x.id === id);
   if (!o) return;
-  if (!confirm("Supprimer définitivement cette observation ?")) return;
-  state.obs = state.obs.filter(x => x.id !== id);
+  const liees = o.type === "incident" ? mesuresDe(id) : [];
+  const question = o.type === "mesure"
+    ? "Supprimer cette mesure ?"
+    : "Supprimer définitivement cette observation ?"
+      + (liees.length ? `\n${liees.length} mesure(s) rattachée(s) seront également supprimées.` : "");
+  if (!confirm(question)) return;
+  state.obs = state.obs.filter(x => x.id !== id && x.incidentId !== id);
   save(); renderAll();
+}
+
+// Mesures affichées sous l'incident auquel elles se rapportent.
+function mesuresHTML(incId){
+  const l = mesuresDe(incId);
+  return `<div class="mesures">
+    ${l.length ? `<div class="mesures-t">Mesures prises</div>` + l.map(m => `
+      <div class="mes"><span class="mes-p">›</span>
+        <span><span class="mes-c">${esc(m.cat)}</span>${m.txt ? ` — <span class="mes-txt">${esc(m.txt)}</span>` : ""}
+        <span class="mes-m"> · ${frDate(m.date)} · ${esc(m.auteur)}</span></span>
+        <button class="mes-x" onclick="supprimerObs('${m.id}')">retirer</button></div>`).join("")
+      : `<div class="mesures-t" style="color:var(--muted);font-weight:400">Aucune mesure rattachée pour l'instant.</div>`}
+    <button class="btn btn-ghost btn-sm add-mes" onclick="nouvelleMesure('${incId}')">+ Ajouter une mesure</button>
+  </div>`;
 }
 
 function obsHTML(o){
   const e = eleveById(o.eleveId);
+  const inc = incidentDe(o);
   return `<article class="obs" data-t="${o.type}">
     <div class="obs-top">
       <span class="obs-who">${esc(e ? e.nom : (o.eleveNom || "Élève supprimé"))}</span>
       <span class="obs-meta">${frDate(o.date)} · ${esc(o.classe)}</span>
     </div>
     <div class="obs-cat">${esc(o.cat)}${o.lieu ? " · " + esc(o.lieu) : ""}${o.grav === 3 ? '<span class="grav">niveau 3</span>' : ""}</div>
-    <p class="obs-txt">${esc(o.txt)}</p>
+    ${o.txt ? `<p class="obs-txt">${esc(o.txt)}</p>` : ""}
+    ${inc ? `<p class="lien-inc">Suite à l'incident du ${frDate(inc.date)} — ${esc(inc.cat)}</p>` : ""}
+    ${o.type === "incident" ? mesuresHTML(o.id) : ""}
     <div class="obs-foot"><span>${esc(o.auteur)}</span>
       <button onclick="supprimerObs('${o.id}')">Supprimer</button></div>
   </article>`;
 }
 
+// Bouton « + Ajouter une mesure » : prépare la saisie déjà rattachée à l'incident.
+function nouvelleMesure(incId){
+  const inc = state.obs.find(x => x.id === incId);
+  if (!inc) return;
+  const onglet = $$("nav button").find(b => b.dataset.tab === "saisie");
+  if (onglet) onglet.click();
+  typeCourant = "mesure";
+  $$("#type-seg button").forEach(x => x.setAttribute("aria-pressed", x.dataset.t === "mesure"));
+  $("#f-classe").value = inc.classe;
+  majEleves($("#f-classe"), $("#f-eleve"));
+  $("#f-eleve").value = inc.eleveId;
+  majMotifs();
+  $("#f-lien").value = incId;
+  $("#f-date").value = today();
+  $("#f-txt").value = "";
+  window.scrollTo({ top:0, behavior:"smooth" });
+  message("f-msg", "Mesure à rattacher à l'incident du " + frDate(inc.date) + " — " + inc.cat + ".", true);
+}
+
 const triDate = (a,b) => b.date.localeCompare(a.date) || (b.saisi||0) - (a.saisi||0);
 
 function renderRecent(){
-  const l = [...state.obs].sort(triDate).slice(0,5);
+  // Les mesures rattachées apparaissent sous leur incident, pas en double.
+  const l = state.obs.filter(o => !estMesureLiee(o)).sort(triDate).slice(0,5);
   $("#recent").innerHTML = l.length
     ? `<h3 style="font-size:.95rem;margin:1.2rem 0 .5rem">Dernières observations</h3>` + l.map(obsHTML).join("")
     : "";
@@ -816,7 +936,11 @@ function filtrer(){
 }
 function renderJournal(){
   const l = filtrer();
-  $("#journal-list").innerHTML = l.length ? l.map(obsHTML).join("")
+  // Une mesure rattachée s'affiche sous son incident lorsque celui-ci est listé ;
+  // sinon elle apparaît seule, avec le rappel de l'incident concerné.
+  const ids = new Set(l.map(o => o.id));
+  const liste = l.filter(o => !(estMesureLiee(o) && ids.has(o.incidentId)));
+  $("#journal-list").innerHTML = liste.length ? liste.map(obsHTML).join("")
     : `<div class="empty"><p>Aucune observation pour ces critères.</p></div>`;
 }
 
@@ -824,9 +948,15 @@ function exportCSV(){
   const l = filtrer();
   if (!l.length) { alert("Rien à exporter avec ces filtres."); return; }
   const q = v => '"' + String(v ?? "").replace(/"/g,'""') + '"';
-  const lignes = [["Date","Classe","Élève","Nature","Motif","Lieu","Niveau","Faits","Saisi par"].map(q).join(";")]
+  const mesuresTxt = o => mesuresDe(o.id)
+    .map(m => m.cat + (m.txt ? " (" + m.txt + ")" : "") + " le " + frDate(m.date)).join(" / ");
+  const lienTxt = o => { const i = incidentDe(o);
+    return i ? "Incident du " + frDate(i.date) + " — " + i.cat : ""; };
+  const lignes = [["Date","Classe","Élève","Nature","Motif","Lieu","Niveau","Faits",
+      "Mesures prises","Se rapporte à","Saisi par"].map(q).join(";")]
     .concat(l.map(o => [frDate(o.date), o.classe, nomEleve(o),
-      LABEL[o.type], o.cat, o.lieu, o.grav || "", o.txt, o.auteur].map(q).join(";")));
+      LABEL[o.type], o.cat, o.lieu, o.grav || "", o.txt,
+      o.type === "incident" ? mesuresTxt(o) : "", lienTxt(o), o.auteur].map(q).join(";")));
   const blob = new Blob(["\ufeff" + lignes.join("\r\n")], { type:"text/csv;charset=utf-8" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -844,28 +974,36 @@ function renderSynthese(){
   const e = eleveById(id) || { nom: "cet élève" };
   const l = state.obs.filter(o => o.eleveId === id).sort(triDate);
   const n = t => l.filter(o => o.type === t).length;
+  const liste = l.filter(o => !estMesureLiee(o));
   box.innerHTML = `
     <div class="stats">
       <div class="stat" data-t="incident"><b>${n("incident")}</b><span>incidents</span></div>
       <div class="stat" data-t="positif"><b>${n("positif")}</b><span>positifs</span></div>
       <div class="stat" data-t="mesure"><b>${n("mesure")}</b><span>mesures</span></div>
     </div>
-    ${l.length ? l.map(obsHTML).join("") : `<div class="empty"><p>Aucune observation pour ${esc(e.nom)}.</p></div>`}`;
+    ${liste.length ? liste.map(obsHTML).join("") : `<div class="empty"><p>Aucune observation pour ${esc(e.nom)}.</p></div>`}`;
 }
 
 function imprimerFiche(){
   const id = $("#s-eleve").value;
   if (!id) { alert("Choisissez un élève avant d'imprimer."); return; }
   const e = eleveById(id) || { nom: "", classe: $("#s-classe").value };
-  const l = state.obs.filter(o => o.eleveId === id).sort((a,b) => a.date.localeCompare(b.date));
+  const tout = state.obs.filter(o => o.eleveId === id).sort((a,b) => a.date.localeCompare(b.date));
+  const l = tout.filter(o => !estMesureLiee(o));
+  const colMesures = o => {
+    if (o.type !== "incident") return "";
+    const m = mesuresDe(o.id);
+    return m.length ? m.map(x => esc(x.cat) + (x.txt ? " — " + esc(x.txt) : "")
+      + " <i>(" + frDate(x.date) + ")</i>").join("<br>") : "—";
+  };
   $("#print-area").innerHTML = `
     <div class="pr-head">${esc(ECOLE)}</div>
     <h2>Suivi du comportement — ${esc(e.nom)} (${esc(e.classe)})</h2>
-    <p>Document établi le ${frDate(today())} · ${l.length} observation(s) consignée(s)</p>
-    <table><thead><tr><th>Date</th><th>Nature</th><th>Motif</th><th>Faits constatés</th><th>Saisi par</th></tr></thead>
+    <p>Document établi le ${frDate(today())} · ${tout.length} observation(s) consignée(s)</p>
+    <table><thead><tr><th>Date</th><th>Nature</th><th>Motif</th><th>Faits constatés</th><th>Mesures prises</th><th>Saisi par</th></tr></thead>
     <tbody>${l.map(o => `<tr><td>${frDate(o.date)}</td><td>${LABEL[o.type]}</td>
       <td>${esc(o.cat)}${o.lieu ? "<br><i>" + esc(o.lieu) + "</i>" : ""}</td>
-      <td>${esc(o.txt)}</td><td>${esc(o.auteur)}</td></tr>`).join("")}</tbody></table>
+      <td>${esc(o.txt)}</td><td>${colMesures(o)}</td><td>${esc(o.auteur)}</td></tr>`).join("")}</tbody></table>
     <p class="sig">Document interne à l'école, communicable à la famille sur demande.<br><br>
     La directrice,</p>`;
   window.print();
