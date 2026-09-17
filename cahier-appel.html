@@ -186,6 +186,7 @@ input:focus, select:focus{ outline:2px solid var(--gold); outline-offset:1px; }
 }
 .status-line b{ color:var(--present-green); }
 .status-line b.taken{ color:var(--gold); }
+.passage-note{ margin:.4rem 0 .2rem; padding:.5rem .75rem; border-radius:8px; background:rgba(46,160,67,.12); border-left:4px solid var(--present-green); font-size:.95rem; }
 
 .student-list{
   border:1px solid var(--border);
@@ -859,7 +860,7 @@ if(window.pdfjsLib){
 }
 let DATA = { classes: [], absences: {} };
 let importCandidates = [];
-let ui = { tab:'appel', selectedClass:null, selectedDate: todayISO(), jourDate: todayISO(), statMonth: currentMonth(), statClass:'ALL' };
+let ui = { tab:'appel', selectedClass:null, selectedDate: todayISO(), jourDate: todayISO(), statMonth: currentMonth(), statClass:'ALL', passageNote:null };
 
 function todayISO(){
   const d = new Date();
@@ -1059,6 +1060,7 @@ function renderAppel(){
     <div class="class-pills" id="pill-row">
       ${DATA.classes.map((c,i)=>`<button class="pill ${c.id===ui.selectedClass?'active':''}" data-cid="${c.id}">${i+1}. ${escapeHtml(c.name)}</button>`).join('')}
     </div>
+    ${ui.passageNote ? `<div class="passage-note">${ui.passageNote}</div>` : ''}
     <div class="status-line">
       ${cls.students.length===0
         ? '<span class="empty">Cette classe n\'a pas encore d\'élèves.</span>'
@@ -1087,11 +1089,13 @@ function renderAppel(){
 
   document.getElementById('date-input').addEventListener('change', e=>{
     ui.selectedDate = e.target.value;
+    ui.passageNote = null;
     render();
   });
   panel.querySelectorAll('#pill-row .pill').forEach(p=>{
     p.addEventListener('click', ()=>{
       ui.selectedClass = p.dataset.cid;
+      ui.passageNote = null;
       render();
     });
   });
@@ -1142,7 +1146,24 @@ function renderAppel(){
         justifiedIds: Array.from(workingJust).filter(id=>workingAbsent.has(id))
       };
       await saveData();
+      // Passage automatique à la classe suivante (ordre de l'onglet Classes) :
+      // on saute les classes déjà appelées pour cette date et celles sans élèves,
+      // en repartant du début de la liste si nécessaire.
+      const jour = DATA.absences[ui.selectedDate] || {};
+      const idx = DATA.classes.findIndex(c=>c.id===cls.id);
+      let suivante = null;
+      for(let k=1; k<DATA.classes.length; k++){
+        const c = DATA.classes[(idx+k) % DATA.classes.length];
+        if(c.students.length>0 && !jour[c.id]){ suivante = c; break; }
+      }
+      if(suivante){
+        ui.selectedClass = suivante.id;
+        ui.passageNote = `✓ Appel de <b>${escapeHtml(cls.name)}</b> enregistré. Classe suivante&nbsp;: <b>${escapeHtml(suivante.name)}</b>.`;
+      }else{
+        ui.passageNote = `✓ Appel de <b>${escapeHtml(cls.name)}</b> enregistré. Toutes les classes ont été appelées pour cette date.`;
+      }
       render();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   }
 }
