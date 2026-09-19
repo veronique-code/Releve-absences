@@ -405,7 +405,9 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   body > *:not(#print-area){ display:none !important; }
   #print-area{ display:block !important; }
   body{ background:#fff; }
+  .letter{ page-break-inside:avoid; break-inside:avoid; }
 }
+@page{ size:A4 portrait; margin:12mm 16mm; }
 
 .pheader{
   display:flex;
@@ -498,53 +500,55 @@ table.pday td.pday-none{ color:#9A947F; font-style:italic; }
 .letter{
   font-family:'Inter',sans-serif;
   color:#25344B;
-  font-size:11.5pt;
-  line-height:1.55;
-  max-width:172mm;
+  font-size:10.5pt;
+  line-height:1.38;
+  max-width:178mm;
   margin:0 auto;
-  padding:4mm 0;
+  padding:0;
 }
 .letter .lt-head{
   display:flex;
   justify-content:space-between;
   align-items:flex-start;
-  gap:20px;
-  margin-bottom:14mm;
+  gap:16px;
+  margin-bottom:7mm;
 }
-.letter .lt-school{ font-size:10pt; line-height:1.35; }
+.letter .lt-school{ font-size:9pt; line-height:1.3; }
 .letter .lt-school b{
   font-family:'Fraunces',serif;
-  font-size:12.5pt;
+  font-size:11.5pt;
   display:block;
-  margin-bottom:2px;
+  margin-bottom:1px;
 }
-.letter .lt-date{ font-size:10.5pt; white-space:nowrap; padding-top:4px; }
-.letter .lt-dest{ margin:0 0 10mm; text-align:right; font-size:11pt; line-height:1.4; }
-.letter .lt-objet{ margin:0 0 7mm; font-weight:600; }
-.letter p{ margin:0 0 4mm; text-align:justify; }
+.letter .lt-date{ font-size:9.5pt; white-space:nowrap; padding-top:3px; }
+.letter .lt-dest{ margin:0 0 6mm; text-align:right; font-size:10pt; line-height:1.35; }
+.letter .lt-objet{ margin:0 0 4mm; font-weight:600; }
+.letter p{ margin:0 0 2.8mm; text-align:justify; }
 .letter ul.lt-dates{
-  margin:0 0 4mm; padding:0; list-style:none;
-  columns:2; column-gap:12mm;
+  margin:0 0 2.8mm; padding:0; list-style:none;
+  columns:2; column-gap:10mm;
 }
+.letter ul.lt-dates.lt-dates-3{ columns:3; column-gap:7mm; font-size:9.5pt; }
 .letter ul.lt-dates li{
-  margin:0 0 1.2mm; padding-left:4mm;
+  margin:0 0 .8mm; padding-left:3.5mm;
   position:relative; break-inside:avoid;
 }
 .letter ul.lt-dates li::before{
   content:"—"; position:absolute; left:0; color:#A97F2E;
 }
-.letter .lt-sign{ margin-top:8mm; text-align:right; line-height:1.5; }
+.letter .lt-sign{ margin-top:4mm; text-align:right; line-height:1.4; }
 .letter .lt-sign b{ font-weight:600; }
 .letter .lt-coupon{
-  margin-top:14mm;
+  margin-top:7mm;
   border-top:1px dashed #9A947F;
-  padding-top:5mm;
-  font-size:10pt;
+  padding-top:3.5mm;
+  font-size:9.5pt;
+  line-height:1.5;
 }
 .letter .lt-coupon .lt-scissors{
-  font-size:9pt; color:#7A719A; margin:0 0 3mm;
+  font-size:8.5pt; color:#7A719A; margin:0 0 2mm;
 }
-.letter .lt-coupon p{ text-align:left; margin:0 0 3mm; }
+.letter .lt-coupon p{ text-align:left; margin:0 0 2.5mm; }
 .letter .lt-line{ display:inline-block; border-bottom:1px dotted #7A719A; min-width:55mm; }
 
 /* ---------- Onglet Retards ---------- */
@@ -2177,7 +2181,7 @@ function imprimerLettreRetard(clsId, sid, indexPeriode){
 
       <p>J'ai relevé <b>${n} retard${n>1?'s':''}</b> concernant votre enfant ${cadre}${rappelAnnee}&nbsp;:</p>
 
-      <ul class="lt-dates">
+      <ul class="lt-dates${dates.length>6 ? ' lt-dates-3' : ''}">
         ${dates.map(d=>`<li>${formatDateLong(d)}</li>`).join('')}
       </ul>
 
