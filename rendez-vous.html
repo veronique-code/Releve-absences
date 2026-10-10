@@ -59,6 +59,8 @@
   .seg input{width:auto;margin:0}
   .seg label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
   .row{display:grid;grid-template-columns:1fr 1fr 120px 36px;gap:8px;margin-bottom:8px;align-items:end}
+  .kid{border:1px solid var(--line);border-radius:10px;padding:10px 12px 2px;margin-bottom:10px;background:#fbfaf7}
+  .kid .kSearch{margin-bottom:8px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%237A719A' stroke-width='2'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cpath d='m11 11 4 4'/%3E%3C/svg%3E") no-repeat 10px center;padding-left:34px}
   .inter{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:#fbfaf7}
   .inter .top{display:grid;grid-template-columns:1fr 1fr 36px;gap:8px;margin-bottom:8px}
   .x{padding:6px 0;width:36px;height:38px;color:var(--danger)}
@@ -198,6 +200,7 @@
   </section>
 </main>
 
+<datalist id="elevesList"></datalist>
 <script type="module">
 /* ============================================================
    1) CONFIGURATION FIREBASE
@@ -247,7 +250,18 @@ if (useFirebase) {
       const ref = await fs.addDoc(fs.collection(db, COLLECTION), data);
       return ref.id;
     },
-    async remove(id){ await fs.deleteDoc(fs.doc(db, COLLECTION, id)); }
+    async remove(id){ await fs.deleteDoc(fs.doc(db, COLLECTION, id)); },
+    /* Élèves du cahier d'appel (collection « cahier-appel », champ payload en JSON) */
+    async eleves(){
+      const snap = await fs.getDocs(fs.collection(db, "cahier-appel"));
+      let best = null;
+      snap.docs.forEach(d => {
+        const x = d.data();
+        if (x.payload && (!best || (x.updatedAt||0) > (best.updatedAt||0))) best = x;
+      });
+      if (!best) return [];
+      return (JSON.parse(best.payload).classes || []);
+    }
   };
 } else {
   const KEY = "rdv-parents-apercu";
@@ -262,7 +276,8 @@ if (useFirebase) {
       else { const i = arr.findIndex(x => x.id === r.id); arr[i] = r; }
       write(arr); return r.id;
     },
-    async remove(id){ write(read().filter(x => x.id !== id)); }
+    async remove(id){ write(read().filter(x => x.id !== id)); },
+    async eleves(){ return []; }
   };
 }
 
@@ -276,6 +291,39 @@ const fmtLong = (d) => d ? new Date(d + "T12:00").toLocaleDateString("fr-FR",{we
 const kidName = (k) => `${(k.nom||"").toUpperCase()} ${k.prenom||""}`.trim();
 const today = () => new Date().toISOString().slice(0,10);
 const suiviAFaire = (r) => r.suivi?.date && !r.suivi?.fait;
+
+/* ---------- Élèves issus du cahier d'appel ---------- */
+let ELEVES = [];
+const norm = (t) => String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Za-z0-9]/g,"").toUpperCase();
+function classeOfficielle(nom){
+  const n = norm(nom);
+  return CLASSES.find(c => norm(c) === n) || String(nom||"").trim();
+}
+function decouperNom(full){
+  // Mots tout en majuscules = nom de famille ; le reste = prénom.
+  const mots = String(full||"").trim().split(/\s+/).filter(Boolean);
+  const estMaj = (m) => /[A-ZÀ-Ý]/.test(m) && m === m.toUpperCase();
+  const nom = mots.filter(estMaj), prenom = mots.filter(m => !estMaj(m));
+  if (!nom.length) return { nom: mots.join(" "), prenom: "" };
+  return { nom: nom.join(" "), prenom: prenom.join(" ") };
+}
+async function chargerEleves(){
+  try {
+    const classes = await store.eleves();
+    ELEVES = [];
+    classes.forEach(c => (c.students||[]).forEach(st => {
+      const { nom, prenom } = decouperNom(st.name);
+      const classe = classeOfficielle(c.name);
+      ELEVES.push({ nom, prenom, classe, label: `${nom.toUpperCase()} ${prenom} — ${classe}`.replace(/\s+—/," —") });
+    }));
+    ELEVES.sort((a,b) => a.label.localeCompare(b.label, "fr"));
+    document.getElementById("elevesList").innerHTML =
+      ELEVES.map(e => `<option value="${esc(e.label)}"></option>`).join("");
+    ELEVES.forEach(e => {
+      if (e.classe && !CLASSES.includes(e.classe)) CLASSES.push(e.classe);
+    });
+  } catch (e) { console.warn("Liste des élèves indisponible", e); }
+}
 
 let all = [], current = null;
 
@@ -377,14 +425,31 @@ $("#btnDelete").onclick = async () => {
    6) FORMULAIRE
    ------------------------------------------------------------ */
 function kidRow(k = {}){
+  const box = document.createElement("div"); box.className = "kid";
+  box.innerHTML = `<input class="kSearch" list="elevesList" autocomplete="off"
+     placeholder="${ELEVES.length ? "Rechercher dans le cahier d'appel : tapez quelques lettres…" : "Saisissez l'élève ci-dessous"}">`;
   const d = document.createElement("div"); d.className = "row";
   d.innerHTML = `
     <div><label>Nom</label><input class="kNom" value="${esc(k.nom)}"></div>
     <div><label>Prénom</label><input class="kPrenom" value="${esc(k.prenom)}"></div>
     <div><label>Classe</label><select class="kClasse"><option value=""></option>${CLASSES.map(c => `<option ${c===k.classe?"selected":""}>${c}</option>`).join("")}</select></div>
     <button class="x" type="button" title="Retirer">✕</button>`;
-  d.querySelector(".x").onclick = () => { if ($("#kids").children.length > 1) d.remove(); };
-  $("#kids").append(d);
+  d.querySelector(".x").onclick = () => { if ($("#kids").children.length > 1) box.remove(); };
+  const search = box.querySelector(".kSearch");
+  if (!ELEVES.length) search.classList.add("hidden");
+  search.addEventListener("input", () => {
+    const e = ELEVES.find(x => x.label === search.value);
+    if (!e) return;
+    d.querySelector(".kNom").value = e.nom;
+    d.querySelector(".kPrenom").value = e.prenom;
+    const sel = d.querySelector(".kClasse");
+    if (![...sel.options].some(o => o.value === e.classe)) sel.add(new Option(e.classe, e.classe));
+    sel.value = e.classe;
+    search.value = "";
+    search.placeholder = "✓ " + e.label + " — rechercher un autre élève pour le remplacer";
+  });
+  box.append(d);
+  $("#kids").append(box);
 }
 function interRow(i = {}){
   const d = document.createElement("div"); d.className = "inter";
@@ -468,7 +533,7 @@ if (useFirebase) {
     if (!user) { $("#userBox").innerHTML = ""; show("login"); return; }
     $("#userBox").innerHTML = `<span>${esc(user.email)}</span><button class="ghost" id="btnOut">Déconnexion</button>`;
     $("#btnOut").onclick = () => au.signOut(auth);
-    try { await refresh(); show("listView"); }
+    try { await refresh(); show("listView"); chargerEleves(); }
     catch (e) { $("#list").innerHTML = `<div class="empty">Accès refusé aux données (${esc(e.code||e.message)}). Vérifiez les règles Firestore.</div>`; show("listView"); }
   });
 } else {
