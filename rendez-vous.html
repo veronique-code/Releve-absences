@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rendez-vous parents — Espace direction</title>
+<style>
+  :root{
+    --bg:#f5f4f0; --card:#ffffff; --ink:#1f2a37; --muted:#6b7280; --line:#e2e0d8;
+    --accent:#1d4e89; --accent-soft:#e6eef8;
+    --dir:#7c3aed; --dir-soft:#f1eafe;
+    --par:#0f766e; --par-soft:#e3f4f1;
+    --oth:#b45309; --oth-soft:#fdf1e2;
+    --danger:#b42318;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.45}
+  header{background:var(--accent);color:#fff;padding:14px 16px}
+  .wrap{max-width:980px;margin:0 auto;padding:0 16px}
+  header .wrap{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:0}
+  header a{color:#dbe7f7;text-decoration:none;font-size:14px}
+  header h1{font-size:20px;margin:0;flex:1}
+  #userBox{font-size:13px;display:flex;gap:8px;align-items:center}
+  button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.ghost{background:transparent;border-color:rgba(255,255,255,.5);color:#fff;padding:5px 10px}
+  button.danger{color:var(--danger);border-color:#f3c5c0}
+  button.small{padding:4px 10px;font-size:13px}
+  main{padding:18px 0 60px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .bar input,.bar select{flex:1;min-width:140px}
+  input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);width:100%}
+  textarea{min-height:90px;resize:vertical}
+  label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:0 0 4px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+  .rdv{cursor:pointer;display:grid;grid-template-columns:92px 1fr auto;gap:12px;align-items:start}
+  .rdv:hover{border-color:#bfcbe0}
+  .date{font-weight:700;font-size:14px}
+  .date small{display:block;font-weight:400;color:var(--muted)}
+  .kids{font-weight:600}
+  .obj{color:var(--muted);font-size:14px;margin-top:2px}
+  .badge{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap}
+  .b-directrice{background:var(--dir-soft);color:var(--dir)}
+  .b-parents{background:var(--par-soft);color:var(--par)}
+  .b-autre{background:var(--oth-soft);color:var(--oth)}
+  .b-prevu{background:var(--accent-soft);color:var(--accent)}
+  .b-realise{background:#e8f5e9;color:#2e7d32}
+  .b-annule{background:#f3f4f6;color:var(--muted)}
+  .b-suivi{background:#fff4e5;color:#b45309}
+  .badges{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+  .empty{text-align:center;color:var(--muted);padding:40px 10px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:12px}
+  h2{font-size:18px;margin:0 0 12px}
+  h3{font-size:15px;margin:18px 0 8px;color:var(--accent)}
+  .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .seg label{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:0;color:var(--ink);font-weight:500;cursor:pointer;background:#fff}
+  .seg input{width:auto;margin:0}
+  .seg label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+  .row{display:grid;grid-template-columns:1fr 1fr 120px 36px;gap:8px;margin-bottom:8px;align-items:end}
+  .inter{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:#fbfaf7}
+  .inter .top{display:grid;grid-template-columns:1fr 1fr 36px;gap:8px;margin-bottom:8px}
+  .x{padding:6px 0;width:36px;height:38px;color:var(--danger)}
+  .actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:18px}
+  .detail dt{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-top:12px}
+  .detail dd{margin:2px 0 0}
+  .propos{border-left:3px solid var(--line);padding:6px 0 6px 12px;margin:10px 0}
+  .propos .who{font-weight:700}
+  .propos .who span{font-weight:400;color:var(--muted)}
+  .propos p{margin:4px 0 0;white-space:pre-wrap}
+  .pre{white-space:pre-wrap}
+  .notice{background:#fff8e1;border:1px solid #f2dfa0;color:#7a5a00;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:14px}
+  .hidden{display:none!important}
+  #login{text-align:center;padding:60px 10px}
+  .print-only{display:none}
+  @media (max-width:640px){
+    .rdv{grid-template-columns:1fr}
+    .badges{flex-direction:row;flex-wrap:wrap;align-items:flex-start}
+    .row{grid-template-columns:1fr 1fr}
+    .row .x{grid-column:span 2;width:100%}
+    .inter .top{grid-template-columns:1fr}
+    .inter .top .x{width:100%}
+  }
+  @media print{
+    header,.bar,#listView,.actions,.notice,#formView{display:none!important}
+    body{background:#fff;font-size:12pt}
+    .card{border:none;padding:0}
+    .print-only{display:block}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a href="./">← Espace direction</a>
+    <h1>Rendez-vous parents</h1>
+    <div id="userBox"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="demoNotice" class="notice hidden">
+    Mode aperçu : la configuration Firebase n'est pas encore collée dans cette page. Les rendez-vous saisis ici restent seulement dans ce navigateur.
+  </div>
+
+  <section id="login" class="hidden">
+    <p>Connectez-vous avec votre compte Google pour accéder aux rendez-vous.</p>
+    <button class="primary" id="btnLogin">Se connecter avec Google</button>
+  </section>
+
+  <!-- LISTE -->
+  <section id="listView" class="hidden">
+    <div class="bar">
+      <button class="primary" id="btnNew">+ Nouveau rendez-vous</button>
+      <input id="fSearch" type="search" placeholder="Rechercher un élève, un intervenant…">
+      <select id="fClasse"><option value="">Toutes les classes</option></select>
+      <select id="fOrigine">
+        <option value="">Toutes origines</option>
+        <option value="directrice">À l'initiative de la directrice</option>
+        <option value="parents">À l'initiative des parents</option>
+        <option value="autre">Autre initiative</option>
+      </select>
+      <select id="fStatut">
+        <option value="">Tous statuts</option>
+        <option value="prevu">Prévus</option>
+        <option value="realise">Réalisés</option>
+        <option value="annule">Annulés</option>
+        <option value="suivi">Suivi à faire</option>
+      </select>
+    </div>
+    <div id="list"></div>
+  </section>
+
+  <!-- DÉTAIL -->
+  <section id="detailView" class="hidden">
+    <div class="card detail" id="detail"></div>
+    <div class="actions">
+      <button id="btnBack">← Retour à la liste</button>
+      <button class="danger" id="btnDelete">Supprimer</button>
+      <button id="btnPrint">Imprimer le compte rendu</button>
+      <button class="primary" id="btnEdit">Modifier</button>
+    </div>
+  </section>
+
+  <!-- FORMULAIRE -->
+  <section id="formView" class="hidden">
+    <div class="card">
+      <h2 id="formTitle">Nouveau rendez-vous</h2>
+      <div class="grid">
+        <div><label for="iDate">Date</label><input type="date" id="iDate"></div>
+        <div><label for="iHeure">Heure</label><input type="time" id="iHeure"></div>
+        <div><label for="iStatut">Statut</label>
+          <select id="iStatut">
+            <option value="prevu">Prévu</option>
+            <option value="realise">Réalisé</option>
+            <option value="annule">Annulé</option>
+          </select>
+        </div>
+      </div>
+
+      <label>À l'initiative de</label>
+      <div class="seg" id="iOrigine">
+        <label><input type="radio" name="origine" value="directrice" checked> La directrice</label>
+        <label><input type="radio" name="origine" value="parents"> Les parents</label>
+        <label><input type="radio" name="origine" value="autre"> Autre</label>
+      </div>
+      <div id="origineAutreBox" class="hidden" style="margin-top:8px">
+        <input id="iOrigineAutre" placeholder="Préciser : enseignant·e, RASED, IEN…">
+      </div>
+
+      <h3>Élève(s) concerné(s)</h3>
+      <div id="kids"></div>
+      <button class="small" id="addKid" type="button">+ Ajouter un élève (fratrie)</button>
+
+      <h3>Objet du rendez-vous</h3>
+      <input id="iObjet" placeholder="Ex. : comportement en récréation, difficultés en lecture, absences répétées…">
+
+      <h3>Intervenants et propos</h3>
+      <div id="inters"></div>
+      <button class="small" id="addInter" type="button">+ Ajouter un intervenant</button>
+
+      <h3>Décisions, engagements, suite à donner</h3>
+      <textarea id="iDecisions" placeholder="Ce qui a été convenu par chacun…"></textarea>
+
+      <div class="grid" style="margin-top:12px">
+        <div><label for="iSuiviDate">Point de suivi prévu le</label><input type="date" id="iSuiviDate"></div>
+        <div><label for="iSuiviFait">Suivi</label>
+          <select id="iSuiviFait"><option value="non">À faire</option><option value="oui">Fait</option></select>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="btnCancel" type="button">Annuler</button>
+        <button class="primary" id="btnSave" type="button">Enregistrer</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+/* ============================================================
+   1) CONFIGURATION FIREBASE
+   Copiez ici le bloc firebaseConfig présent dans vos autres pages
+   (par exemple comportement.html) — c'est le même projet.
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyDovrxndeWXBs-ZA_-QQYw6983D5bQ6kgo",
+  authDomain: "sorties-scolaires.firebaseapp.com",
+  projectId: "sorties-scolaires",
+  storageBucket: "sorties-scolaires.firebasestorage.app",
+  messagingSenderId: "690408502155",
+  appId: "1:690408502155:web:d0d5cfc618e64d5028f58e"
+};
+const COLLECTION = "rendezvous";
+const DIRECTRICE = "Mme BUCARI CIOMEI";
+
+const CLASSES = ["CPA","CPB","CPC","CE1A","CE1B","CE1-CE2","CE2A","CE2B","CM1A","CM1B","CM1-CM2","CM2A","CM2B","ULIS"];
+const QUALITES = ["Mère","Père","Représentant légal","Directrice","Enseignant·e","AESH","RASED","Psychologue EN","Infirmière / médecin scolaire","Éducateur·rice","Autre"];
+const ORIGINES = {directrice:"Initiative de la directrice", parents:"Initiative des parents", autre:"Autre initiative"};
+const STATUTS = {prevu:"Prévu", realise:"Réalisé", annule:"Annulé"};
+
+/* ------------------------------------------------------------
+   2) STOCKAGE : Firestore si la config est remplie, sinon aperçu local
+   ------------------------------------------------------------ */
+const useFirebase = !!firebaseConfig.apiKey;
+let store, auth, fb = {};
+
+if (useFirebase) {
+  const app  = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+  const au   = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+  const fs   = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+  const a = app.initializeApp(firebaseConfig);
+  auth = au.getAuth(a);
+  const db = fs.getFirestore(a);
+  fb = {au, fs};
+  store = {
+    async list(){
+      const snap = await fs.getDocs(fs.collection(db, COLLECTION));
+      return snap.docs.map(d => ({id:d.id, ...d.data()}));
+    },
+    async save(r){
+      const {id, ...data} = r;
+      data.updatedAt = new Date().toISOString();
+      if (id) { await fs.setDoc(fs.doc(db, COLLECTION, id), data); return id; }
+      data.createdAt = data.updatedAt;
+      const ref = await fs.addDoc(fs.collection(db, COLLECTION), data);
+      return ref.id;
+    },
+    async remove(id){ await fs.deleteDoc(fs.doc(db, COLLECTION, id)); }
+  };
+} else {
+  const KEY = "rdv-parents-apercu";
+  const read = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return mem; } };
+  let mem = [];
+  const write = (arr) => { mem = arr; try { localStorage.setItem(KEY, JSON.stringify(arr)); } catch {} };
+  store = {
+    async list(){ return read(); },
+    async save(r){
+      const arr = read(); r.updatedAt = new Date().toISOString();
+      if (!r.id) { r.id = "r" + Date.now(); r.createdAt = r.updatedAt; arr.push(r); }
+      else { const i = arr.findIndex(x => x.id === r.id); arr[i] = r; }
+      write(arr); return r.id;
+    },
+    async remove(id){ write(read().filter(x => x.id !== id)); }
+  };
+}
+
+/* ------------------------------------------------------------
+   3) OUTILS
+   ------------------------------------------------------------ */
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtDate = (d) => d ? new Date(d + "T12:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short",year:"numeric"}) : "—";
+const fmtLong = (d) => d ? new Date(d + "T12:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) : "—";
+const kidName = (k) => `${(k.nom||"").toUpperCase()} ${k.prenom||""}`.trim();
+const today = () => new Date().toISOString().slice(0,10);
+const suiviAFaire = (r) => r.suivi?.date && !r.suivi?.fait;
+
+let all = [], current = null;
+
+function show(view){
+  ["login","listView","detailView","formView"].forEach(v => $("#"+v).classList.toggle("hidden", v !== view));
+  window.scrollTo(0,0);
+}
+
+/* ------------------------------------------------------------
+   4) LISTE
+   ------------------------------------------------------------ */
+CLASSES.forEach(c => $("#fClasse").insertAdjacentHTML("beforeend", `<option>${c}</option>`));
+["#fSearch","#fClasse","#fOrigine","#fStatut"].forEach(s => $(s).addEventListener("input", renderList));
+
+async function refresh(){
+  all = await store.list();
+  all.sort((a,b) => (b.date||"").localeCompare(a.date||"") || (b.heure||"").localeCompare(a.heure||""));
+  renderList();
+}
+
+function renderList(){
+  const q = $("#fSearch").value.trim().toLowerCase();
+  const fc = $("#fClasse").value, fo = $("#fOrigine").value, fs = $("#fStatut").value;
+  const rows = all.filter(r => {
+    if (fc && !(r.enfants||[]).some(k => k.classe === fc)) return false;
+    if (fo && r.origine !== fo) return false;
+    if (fs === "suivi" ? !suiviAFaire(r) : (fs && r.statut !== fs)) return false;
+    if (q) {
+      const hay = [r.objet, r.decisions, ...(r.enfants||[]).map(kidName),
+                   ...(r.intervenants||[]).flatMap(i => [i.nom, i.qualite, i.propos])].join(" ").toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  $("#list").innerHTML = rows.length ? rows.map(r => `
+    <div class="card rdv" data-id="${r.id}">
+      <div class="date">${fmtDate(r.date)}<small>${esc(r.heure||"")}</small></div>
+      <div>
+        <div class="kids">${(r.enfants||[]).map(k => `${esc(kidName(k))}${k.classe?` <span style="color:var(--muted);font-weight:400">(${esc(k.classe)})</span>`:""}`).join(", ") || "<em>Élève non renseigné</em>"}</div>
+        <div class="obj">${esc(r.objet||"")}</div>
+      </div>
+      <div class="badges">
+        <span class="badge b-${r.origine}">${ORIGINES[r.origine]||""}</span>
+        <span class="badge b-${r.statut}">${STATUTS[r.statut]||""}</span>
+        ${suiviAFaire(r) ? `<span class="badge b-suivi">Suivi ${fmtDate(r.suivi.date)}</span>` : ""}
+      </div>
+    </div>`).join("")
+    : `<div class="empty">${all.length ? "Aucun rendez-vous ne correspond à ces filtres." : "Aucun rendez-vous enregistré pour l'instant."}</div>`;
+  document.querySelectorAll(".rdv").forEach(el => el.onclick = () => openDetail(el.dataset.id));
+}
+
+/* ------------------------------------------------------------
+   5) DÉTAIL / COMPTE RENDU
+   ------------------------------------------------------------ */
+function openDetail(id){
+  current = all.find(r => r.id === id);
+  const r = current;
+  const origine = r.origine === "autre" && r.origineAutre ? `Autre initiative : ${r.origineAutre}` : ORIGINES[r.origine];
+  $("#detail").innerHTML = `
+    <div class="print-only" style="margin-bottom:16px">
+      <strong>École élémentaire Jean Aicard — La Garde</strong><br>
+      <span style="font-size:11pt">Compte rendu de rendez-vous avec la famille</span>
+    </div>
+    <h2>${(r.enfants||[]).map(k => esc(kidName(k))).join(", ") || "Rendez-vous"}</h2>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <span class="badge b-${r.origine}">${esc(origine)}</span>
+      <span class="badge b-${r.statut}">${STATUTS[r.statut]}</span>
+      ${suiviAFaire(r) ? `<span class="badge b-suivi">Suivi prévu le ${fmtDate(r.suivi.date)}</span>` : ""}
+    </div>
+    <dl>
+      <dt>Date</dt><dd>${fmtLong(r.date)}${r.heure ? " à " + esc(r.heure) : ""}</dd>
+      <dt>Élève(s)</dt><dd>${(r.enfants||[]).map(k => `${esc(kidName(k))}${k.classe ? " — " + esc(k.classe) : ""}`).join("<br>") || "—"}</dd>
+      <dt>Objet</dt><dd class="pre">${esc(r.objet) || "—"}</dd>
+      <dt>Propos des intervenants</dt>
+      <dd>${(r.intervenants||[]).map(i => `
+        <div class="propos">
+          <div class="who">${esc(i.nom || "—")} <span>${i.qualite ? "· " + esc(i.qualite) : ""}</span></div>
+          <p>${esc(i.propos) || "<em>—</em>"}</p>
+        </div>`).join("") || "—"}</dd>
+      <dt>Décisions et suite à donner</dt><dd class="pre">${esc(r.decisions) || "—"}</dd>
+      ${r.suivi?.date ? `<dt>Point de suivi</dt><dd>${fmtLong(r.suivi.date)} — ${r.suivi.fait ? "fait" : "à faire"}</dd>` : ""}
+    </dl>
+    <div class="print-only" style="margin-top:40px;display:flex;justify-content:space-between">
+      <span>La directrice,</span><span>Signature des représentants légaux :</span>
+    </div>`;
+  show("detailView");
+}
+$("#btnBack").onclick = () => show("listView");
+$("#btnPrint").onclick = () => window.print();
+$("#btnEdit").onclick = () => openForm(current);
+$("#btnDelete").onclick = async () => {
+  if (!confirm("Supprimer définitivement ce rendez-vous et son compte rendu ?")) return;
+  await store.remove(current.id); await refresh(); show("listView");
+};
+
+/* ------------------------------------------------------------
+   6) FORMULAIRE
+   ------------------------------------------------------------ */
+function kidRow(k = {}){
+  const d = document.createElement("div"); d.className = "row";
+  d.innerHTML = `
+    <div><label>Nom</label><input class="kNom" value="${esc(k.nom)}"></div>
+    <div><label>Prénom</label><input class="kPrenom" value="${esc(k.prenom)}"></div>
+    <div><label>Classe</label><select class="kClasse"><option value=""></option>${CLASSES.map(c => `<option ${c===k.classe?"selected":""}>${c}</option>`).join("")}</select></div>
+    <button class="x" type="button" title="Retirer">✕</button>`;
+  d.querySelector(".x").onclick = () => { if ($("#kids").children.length > 1) d.remove(); };
+  $("#kids").append(d);
+}
+function interRow(i = {}){
+  const d = document.createElement("div"); d.className = "inter";
+  d.innerHTML = `
+    <div class="top">
+      <div><label>Nom</label><input class="iNom" value="${esc(i.nom)}" placeholder="Ex. : Mme DUPONT"></div>
+      <div><label>Qualité</label><select class="iQual"><option value=""></option>${QUALITES.map(q => `<option ${q===i.qualite?"selected":""}>${q}</option>`).join("")}</select></div>
+      <button class="x" type="button" title="Retirer">✕</button>
+    </div>
+    <label>Propos</label>
+    <textarea class="iPropos" placeholder="Ce que cette personne a exprimé…">${esc(i.propos)}</textarea>`;
+  d.querySelector(".x").onclick = () => d.remove();
+  $("#inters").append(d);
+}
+$("#addKid").onclick = () => kidRow();
+$("#addInter").onclick = () => interRow();
+document.querySelectorAll('input[name="origine"]').forEach(r => r.onchange = () =>
+  $("#origineAutreBox").classList.toggle("hidden", r.value !== "autre" || !r.checked));
+
+function openForm(r = null){
+  current = r;
+  $("#formTitle").textContent = r ? "Modifier le rendez-vous" : "Nouveau rendez-vous";
+  $("#iDate").value = r?.date || today();
+  $("#iHeure").value = r?.heure || "";
+  $("#iStatut").value = r?.statut || "prevu";
+  const o = r?.origine || "directrice";
+  document.querySelector(`input[name="origine"][value="${o}"]`).checked = true;
+  $("#origineAutreBox").classList.toggle("hidden", o !== "autre");
+  $("#iOrigineAutre").value = r?.origineAutre || "";
+  $("#iObjet").value = r?.objet || "";
+  $("#iDecisions").value = r?.decisions || "";
+  $("#iSuiviDate").value = r?.suivi?.date || "";
+  $("#iSuiviFait").value = r?.suivi?.fait ? "oui" : "non";
+  $("#kids").innerHTML = ""; (r?.enfants?.length ? r.enfants : [{}]).forEach(kidRow);
+  $("#inters").innerHTML = "";
+  (r?.intervenants?.length ? r.intervenants
+     : [{nom:DIRECTRICE, qualite:"Directrice"}, {qualite:"Mère"}, {qualite:"Père"}]).forEach(interRow);
+  show("formView");
+}
+$("#btnNew").onclick = () => openForm();
+$("#btnCancel").onclick = () => current ? openDetail(current.id) : show("listView");
+
+$("#btnSave").onclick = async () => {
+  const enfants = [...document.querySelectorAll("#kids .row")].map(d => ({
+    nom: d.querySelector(".kNom").value.trim(),
+    prenom: d.querySelector(".kPrenom").value.trim(),
+    classe: d.querySelector(".kClasse").value
+  })).filter(k => k.nom || k.prenom);
+  if (!enfants.length) { alert("Indiquez au moins le nom de l'élève concerné."); return; }
+  if (!$("#iDate").value) { alert("Indiquez la date du rendez-vous."); return; }
+  const intervenants = [...document.querySelectorAll("#inters .inter")].map(d => ({
+    nom: d.querySelector(".iNom").value.trim(),
+    qualite: d.querySelector(".iQual").value,
+    propos: d.querySelector(".iPropos").value.trim()
+  })).filter(i => i.nom || i.propos);
+  const rec = {
+    ...(current?.id ? {id: current.id, createdAt: current.createdAt} : {}),
+    date: $("#iDate").value, heure: $("#iHeure").value, statut: $("#iStatut").value,
+    origine: document.querySelector('input[name="origine"]:checked').value,
+    origineAutre: $("#iOrigineAutre").value.trim(),
+    enfants, objet: $("#iObjet").value.trim(), intervenants,
+    decisions: $("#iDecisions").value.trim(),
+    suivi: { date: $("#iSuiviDate").value, fait: $("#iSuiviFait").value === "oui" }
+  };
+  $("#btnSave").disabled = true;
+  try {
+    const id = await store.save(rec);
+    await refresh(); openDetail(id);
+  } catch (e) {
+    alert("Enregistrement impossible : " + e.message);
+  } finally { $("#btnSave").disabled = false; }
+};
+
+/* ------------------------------------------------------------
+   7) CONNEXION
+   ------------------------------------------------------------ */
+if (useFirebase) {
+  const {au} = fb;
+  $("#btnLogin").onclick = () => au.signInWithPopup(auth, new au.GoogleAuthProvider());
+  au.onAuthStateChanged(auth, async (user) => {
+    if (!user) { $("#userBox").innerHTML = ""; show("login"); return; }
+    $("#userBox").innerHTML = `<span>${esc(user.email)}</span><button class="ghost" id="btnOut">Déconnexion</button>`;
+    $("#btnOut").onclick = () => au.signOut(auth);
+    try { await refresh(); show("listView"); }
+    catch (e) { $("#list").innerHTML = `<div class="empty">Accès refusé aux données (${esc(e.code||e.message)}). Vérifiez les règles Firestore.</div>`; show("listView"); }
+  });
+} else {
+  $("#demoNotice").classList.remove("hidden");
+  await refresh(); show("listView");
+}
+</script>
+</body>
+</html>
