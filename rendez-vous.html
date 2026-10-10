@@ -356,8 +356,10 @@ function openDetail(id){
       <dt>Décisions et suite à donner</dt><dd class="pre">${esc(r.decisions) || "—"}</dd>
       ${r.suivi?.date ? `<dt>Point de suivi</dt><dd>${fmtLong(r.suivi.date)} — ${r.suivi.fait ? "fait" : "à faire"}</dd>` : ""}
     </dl>
-    <div class="print-only" style="margin-top:40px;display:flex;justify-content:space-between">
-      <span>La directrice,</span><span>Signature des représentants légaux :</span>
+    <div class="print-only" style="margin-top:40px">
+      <div style="display:flex;justify-content:space-between">
+        <span>La directrice,</span><span>Signature des représentants légaux :</span>
+      </div>
     </div>`;
   show("detailView");
 }
