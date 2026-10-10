@@ -138,6 +138,7 @@ body{
 .record.rec-sorties .tab{ background:var(--forest); }
 .record.rec-demandes .tab{ background:var(--terracotta); }
 .record.rec-comportement .tab{ background:var(--lilas); }
+.record.rec-rdv .tab{ background:var(--gold); }
 
 .record .stripe{
   position:absolute;
@@ -149,6 +150,7 @@ body{
 .record.rec-sorties .stripe{ background:var(--gold); }
 .record.rec-demandes .stripe{ background:var(--lilas); }
 .record.rec-comportement .stripe{ background:var(--forest); }
+.record.rec-rdv .stripe{ background:var(--ciel); }
 
 .record h2{
   font-family:'Fraunces',serif;
@@ -174,6 +176,7 @@ body{
 .record.rec-sorties .go{ color:var(--menthe-fonce); }
 .record.rec-demandes .go{ color:var(--corail-fonce); }
 .record.rec-comportement .go{ color:var(--prune); }
+.record.rec-rdv .go{ color:#2F6FA8; }
 .record .go .arrow{ transition:transform .15s ease; }
 
 /* Pastille d'échéances sur la carte Demandes & suivi */
@@ -344,6 +347,21 @@ body:not(.ed-ready){overflow:hidden}
         </div>
       </a>
 
+
+      <a class="record rec-rdv" href="./rendez-vous.html">
+        <span class="stripe"></span>
+        <span class="tab">Avec les familles</span>
+        <span class="rappel-hub" id="rappel-rdv" hidden></span>
+        <h2>Rendez-vous parents</h2>
+        <p class="desc">Notez qui a demandé le rendez-vous, l'élève concerné et les propos de chacun, puis imprimez le compte rendu.</p>
+        <span class="go">Ouvrir les rendez-vous <span class="arrow">→</span></span>
+        <div class="meta-row">
+          <span class="tag">Accès protégé</span>
+          <span class="tag">Compte rendu</span>
+          <span class="tag">Suivis</span>
+        </div>
+      </a>
+
     </div>
   </div>
 
@@ -453,6 +471,33 @@ await new Promise(resolve => {
       (retard + jour ? navigator.setAppBadge(retard + jour) : navigator.clearAppBadge()).catch(()=>{});
     }
   }catch(e){ console.warn("Pastille des demandes indisponible", e); }
+})();
+
+/* --- Pastille « Rendez-vous parents » : RDV du jour et suivis en attente --- */
+(async () => {
+  try{
+    const fs = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
+    const snap = await fs.getDocs(fs.collection(fs.getFirestore(auth.app), "rendezvous"));
+    const d0 = new Date();
+    const auj = `${d0.getFullYear()}-${String(d0.getMonth()+1).padStart(2,"0")}-${String(d0.getDate()).padStart(2,"0")}`;
+    let rdvJour = 0, suivis = 0, retard = false;
+    snap.forEach(d => {
+      const r = d.data();
+      if(r.statut === "prevu" && r.date === auj) rdvJour++;
+      if(r.statut !== "annule" && r.suivi && r.suivi.date && !r.suivi.fait && r.suivi.date <= auj){
+        suivis++; if(r.suivi.date < auj) retard = true;
+      }
+    });
+    const el = document.getElementById("rappel-rdv");
+    const morceaux = [];
+    if(rdvJour) morceaux.push(`${rdvJour} aujourd'hui`);
+    if(suivis)  morceaux.push(`${suivis} suivi${suivis > 1 ? "s" : ""}`);
+    if(morceaux.length){
+      el.textContent = morceaux.join(" · ");
+      el.classList.toggle("late", retard);
+      el.hidden = false;
+    }
+  }catch(e){ console.warn("Pastille des rendez-vous indisponible", e); }
 })();
 
 if('serviceWorker' in navigator){
