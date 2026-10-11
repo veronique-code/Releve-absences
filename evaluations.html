@@ -717,17 +717,32 @@ function intervenantsAPC(){
   renforts().filter(r => r.nom && +r.groupes > 0).forEach(r => out.push({ nom: r.nom, classe: "", niv: null, capacite: +r.groupes, quotite: r.quotite }));
   return out;
 }
-/* Confie les groupes des classes dont l'enseignant(e) ne fait pas d'APC */
+/* Répartit tous les groupes entre les enseignants qui font APC :
+   1. chacun garde d'abord les groupes de sa classe (dans la limite de sa capacité) ;
+   2. les autres groupes vont à qui est le moins chargé, de préférence du même niveau ;
+   3. un(e) enseignant(e) sans groupe en reprend un chez le collègue le plus chargé. */
 function repartirAPC(groupes){
-  const ens = intervenantsAPC(), charge = {};
-  ens.forEach(e => charge[e.nom] = 0);
-  groupes.forEach(g => { if (charge[g.intervenant] != null) charge[g.intervenant]++; });
-  groupes.filter(g => g.intervenant === "À désigner").forEach(g => {
-    const nivsG = NIVEAUX.filter(n => g.classe.includes(n)).map(n => NIVEAUX.indexOf(n));
-    const dist = (e) => e.niv == null ? 1.5 : Math.min(...e.niv.flatMap(a => nivsG.map(b => Math.abs(a - b))));
-    const libre = ens.filter(e => charge[e.nom] < e.capacite)
-      .sort((a, b) => dist(a) - dist(b) || charge[a.nom] - charge[b.nom]);
-    if (libre.length) { g.intervenant = libre[0].nom; charge[libre[0].nom]++; }
+  const ens = intervenantsAPC(); if (!ens.length) return groupes;
+  const charge = {}; ens.forEach(e => charge[e.nom] = 0);
+  const nivsDe = (g) => NIVEAUX.filter(n => (g.classe || "").includes(n)).map(n => NIVEAUX.indexOf(n));
+  const dist = (e, g) => { const ng = nivsDe(g); if (e.niv == null || !ng.length) return 1.5; return Math.min(...e.niv.flatMap(a => ng.map(b => Math.abs(a - b)))); };
+  const taux = (e) => charge[e.nom] / Math.max(e.capacite, 0.01);
+  groupes.forEach(g => g.intervenant = "");
+  groupes.forEach(g => {
+    const e = ens.find(x => x.classe === g.classe);
+    if (e && charge[e.nom] < e.capacite) { g.intervenant = e.nom; charge[e.nom]++; }
+  });
+  groupes.filter(g => !g.intervenant).forEach(g => {
+    const e = [...ens].sort((a, b) => taux(a) - taux(b) || dist(a, g) - dist(b, g))[0];
+    g.intervenant = e.nom; charge[e.nom]++;
+  });
+  ens.filter(e => e.capacite > 0).forEach(e => {
+    if (charge[e.nom] > 0) return;
+    const donneurs = ens.filter(d => charge[d.nom] > 1).sort((a, b) => charge[b.nom] - charge[a.nom]);
+    for (const d of donneurs) {
+      const g = groupes.filter(x => x.intervenant === d.nom).sort((a, b) => dist(e, a) - dist(e, b))[0];
+      if (g) { g.intervenant = e.nom; charge[d.nom]--; charge[e.nom]++; break; }
+    }
   });
   return groupes;
 }
@@ -849,7 +864,7 @@ function renderGroupes(){
   if (gCur === "apc") {
     const tot = new Set(liste.flatMap(g => g.eleves)).size;
     intro = `<h2>APC — élèves les plus en difficulté</h2>
-      <p class="lead">Dans chaque classe, un groupe de français (jour 1) et un groupe de mathématiques (jour 2) avec les élèves ${R_.apc.niveauMin === 3 ? "N3" : "N" + R_.apc.niveauMin + " et plus"} de la discipline, de ${R_.apc.min} à ${R_.apc.max} élèves${R_.apc.completer ? ", complétés si besoin par les élèves suivants les plus fragiles" : ""}. ${tot} élèves concernés. Les groupes des classes dont l'enseignant(e) ne fait pas d'APC sont confiés aux collègues qui ont de la place, en priorité du même niveau.</p>
+      <p class="lead">Dans chaque classe, un groupe de français (jour 1) et un groupe de mathématiques (jour 2) avec les élèves ${R_.apc.niveauMin === 3 ? "N3" : "N" + R_.apc.niveauMin + " et plus"} de la discipline, de ${R_.apc.min} à ${R_.apc.max} élèves${R_.apc.completer ? ", complétés si besoin par les élèves suivants les plus fragiles" : ""}. ${tot} élèves concernés. Tous les enseignants qui font APC ont au moins un groupe : chacun garde d'abord les élèves de sa classe, puis les autres groupes sont répartis pour équilibrer la charge, en priorité au même niveau.</p>
       ${repartitionHTML(liste)}`;
   } else if (gCur === "s1d") {
     const S = R_.s1d, h = liste.length * S.mercredis * S.duree;
