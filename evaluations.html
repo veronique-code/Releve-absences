@@ -244,7 +244,10 @@
       <select id="cMat"><option value="F">Français</option><option value="M">Mathématiques</option></select>
       <span class="grow"></span>
       <button class="small" onclick="window.print()">Imprimer</button>
+      <button class="small" id="cExport" title="Fichier Excel de cette classe, à transmettre à l'enseignant(e)">Fichier pour l'enseignant(e)</button>
+      <button class="small" id="cExportAll" title="Un fichier Excel par classe">Toutes les classes</button>
     </div>
+    <div class="rgpd noprint">Chaque fichier ne contient que les élèves de la classe. Transmettez-le uniquement à l'enseignant(e) concerné(e), par votre messagerie académique.</div>
     <div class="print-only"><strong>École élémentaire Jean Aicard — Évaluations nationales <span class="annee"></span></strong></div>
     <div id="classeView"></div>
   </section>
@@ -286,6 +289,7 @@
 
 <dialog id="dlg"><div class="dlg" id="dlgBody"></div></dialog>
 <datalist id="elevesList"></datalist>
+<datalist id="intervenantsList"></datalist>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script type="module">
@@ -311,7 +315,7 @@ const NV_TXT = { 3:"N3 — grande difficulté", 2:"N2 — besoins", 1:"N1 — fr
 
 const REGLAGES_DEFAUT = {
   seuils: { n3: 50, n2: 25, n1: 10 },
-  apc:  { niveauMin: 3, min: 6, max: 8, completer: true },
+  apc:  { niveauMin: 3, min: 6, max: 8, completer: true, capacite: 2 },
   s1d:  { niveaux: ["CP","CE1"], publics: [2], min: 6, max: 11, heures: 24, mercredis: 4, duree: 1.5 },
   sran: { publics: [2,3], min: 6, max: 11, sessions: [
             { nom: "Vacances d'automne — semaine 1", niveaux: ["CE1","CE2"], enseignants: 2 },
@@ -323,7 +327,9 @@ const REGLAGES_DEFAUT = {
     "CM1A":"Mme GONZALEZ", "CM1B":"Mme JOURDAIN", "CM1/CM2":"Mme ODASSO",
     "CM2A":"Mme BORGETTO", "CM2B":"Mme BLAISON"
   },
-  dispenses: ["CM1B"]
+  dispenses: ["CM1B","CE1/CE2"],
+  renforts: [ { nom: "Mme JUILLET", quotite: "33 %", groupes: 1 } ],
+  version: 2
 };
 
 /* =====================================================================
@@ -442,7 +448,7 @@ function lireFichier(nomFichier, wb){
   const G = XLSX.utils.sheet_to_json(wb.Sheets[nGroupes], { header: 1, defval: null, raw: false });
   const S = nScores ? XLSX.utils.sheet_to_json(wb.Sheets[nScores], { header: 1, defval: null, raw: false }) : [];
 
-  const comps = (G[0] || []).slice(2).map(c => c ? String(c).replace(/​/g, "").trim() : null);
+  const comps = (G[0] || []).slice(2).map(c => c ? String(c).replace(/\u200b/g, "").replace(/\s+/g, " ").trim() : null);
   const nb = comps.findLastIndex(c => c) + 1;
   const refs = (G[1] || []).slice(2, 2 + nb);
   const seuil = (lab) => (G.find(r => String(r?.[1] || "").includes(lab)) || []).slice(2, 2 + nb);
@@ -697,7 +703,34 @@ function majoritaire(ids){
   let f = 0, m = 0; ids.map(byId).filter(Boolean).forEach(e => dominante(e) === "M" ? m++ : f++);
   return m > f ? "M" : "F";
 }
-function intervenantDe(c){ return R().dispenses.includes(c) ? "À désigner (enseignante dispensée)" : (R().enseignants[c] || ""); }
+function intervenantDe(c){ return R().dispenses.includes(c) ? "À désigner" : (R().enseignants[c] || ""); }
+const capaciteAPC = () => R().apc.capacite ?? 2;
+const renforts = () => R().renforts || [];
+/* Liste des enseignants qui font APC, avec le nombre de groupes qu'ils peuvent prendre */
+function intervenantsAPC(){
+  const out = [];
+  ORDRE_CLASSES.forEach(c => {
+    if (R().dispenses.includes(c) || !R().enseignants[c]) return;
+    const nivs = NIVEAUX.filter(n => c.includes(n));
+    out.push({ nom: R().enseignants[c], classe: c, niv: nivs.map(n => NIVEAUX.indexOf(n)), capacite: capaciteAPC() });
+  });
+  renforts().filter(r => r.nom && +r.groupes > 0).forEach(r => out.push({ nom: r.nom, classe: "", niv: null, capacite: +r.groupes, quotite: r.quotite }));
+  return out;
+}
+/* Confie les groupes des classes dont l'enseignant(e) ne fait pas d'APC */
+function repartirAPC(groupes){
+  const ens = intervenantsAPC(), charge = {};
+  ens.forEach(e => charge[e.nom] = 0);
+  groupes.forEach(g => { if (charge[g.intervenant] != null) charge[g.intervenant]++; });
+  groupes.filter(g => g.intervenant === "À désigner").forEach(g => {
+    const nivsG = NIVEAUX.filter(n => g.classe.includes(n)).map(n => NIVEAUX.indexOf(n));
+    const dist = (e) => e.niv == null ? 1.5 : Math.min(...e.niv.flatMap(a => nivsG.map(b => Math.abs(a - b))));
+    const libre = ens.filter(e => charge[e.nom] < e.capacite)
+      .sort((a, b) => dist(a) - dist(b) || charge[a.nom] - charge[b.nom]);
+    if (libre.length) { g.intervenant = libre[0].nom; charge[libre[0].nom]++; }
+  });
+  return groupes;
+}
 
 function genAPC(){
   const S = R().apc, out = [];
@@ -714,7 +747,7 @@ function genAPC(){
         intervenant: intervenantDe(c), eleves: ids.slice(0, S.max), attente: ids.slice(S.max) });
     });
   });
-  return out;
+  return repartirAPC(out);
 }
 function genS1D(){
   const S = R().s1d, out = [];
@@ -763,6 +796,10 @@ function genererTout(){ DATA.groupes.apc = genAPC(); DATA.groupes.s1d = genS1D()
 let gCur = "apc";
 $$("#gTabs button").forEach(b => b.onclick = () => { gCur = b.dataset.g; $$("#gTabs button").forEach(x => x.classList.toggle("on", x === b)); renderGroupes(); });
 
+function intervenantsDatalist(){
+  const noms = [...new Set([...Object.values(R().enseignants), ...renforts().map(r => r.nom)].filter(Boolean))];
+  $("#intervenantsList").innerHTML = noms.map(n => `<option value="${esc(n)}"></option>`).join("");
+}
 function elevesDatalist(){
   $("#elevesList").innerHTML = DATA.eleves.map(e => `<option value="${esc(nomComplet(e) + " — " + e.classe)}"></option>`).join("");
 }
@@ -792,7 +829,7 @@ function groupeHTML(g, liste){
       <div class="gm">${g.disp === "apc" ? `Classe de ${esc(enseignantClasse || "—")}` : `Dominante ${MATS[g.matiere].toLowerCase()}`}</div></div>
       <span class="count ${bad ? "bad" : ""}" title="Entre ${S.min} et ${S.max} élèves">${n} élève${n > 1 ? "s" : ""}</span></div>
     <div class="fields">
-      <div><label class="f">Pris en charge par</label><input data-f="intervenant" value="${esc(g.intervenant)}" placeholder="Nom de l'enseignant(e)"></div>
+      <div><label class="f">Pris en charge par</label><input data-f="intervenant" list="intervenantsList" value="${esc(g.intervenant)}" placeholder="Nom de l'enseignant(e)"></div>
       <div><label class="f">Jour</label><input data-f="jour" value="${esc(g.jour)}"></div>
       <div><label class="f">Horaire</label><input data-f="horaire" value="${esc(g.horaire)}" placeholder="ex. 16h30–17h30"></div>
       <div><label class="f">Nombre de séances</label><input data-f="seances" value="${esc(g.seances)}"></div>
@@ -805,13 +842,15 @@ function groupeHTML(g, liste){
 }
 function renderGroupes(){
   const body = $("#gBody");
+  intervenantsDatalist();
   if (!DATA.eleves.length) { body.innerHTML = `<div class="empty">Importez d'abord les fichiers de restitution.</div>`; return; }
   const liste = DATA.groupes[gCur], R_ = R();
   let intro = "";
   if (gCur === "apc") {
     const tot = new Set(liste.flatMap(g => g.eleves)).size;
     intro = `<h2>APC — élèves les plus en difficulté</h2>
-      <p class="lead">Dans chaque classe, un groupe de français (jour 1) et un groupe de mathématiques (jour 2) avec les élèves ${R_.apc.niveauMin === 3 ? "N3" : "N" + R_.apc.niveauMin + " et plus"} de la discipline, de ${R_.apc.min} à ${R_.apc.max} élèves${R_.apc.completer ? ", complétés si besoin par les élèves suivants les plus fragiles" : ""}. ${tot} élèves concernés.</p>`;
+      <p class="lead">Dans chaque classe, un groupe de français (jour 1) et un groupe de mathématiques (jour 2) avec les élèves ${R_.apc.niveauMin === 3 ? "N3" : "N" + R_.apc.niveauMin + " et plus"} de la discipline, de ${R_.apc.min} à ${R_.apc.max} élèves${R_.apc.completer ? ", complétés si besoin par les élèves suivants les plus fragiles" : ""}. ${tot} élèves concernés. Les groupes des classes dont l'enseignant(e) ne fait pas d'APC sont confiés aux collègues qui ont de la place, en priorité du même niveau.</p>
+      ${repartitionHTML(liste)}`;
   } else if (gCur === "s1d") {
     const S = R_.s1d, h = liste.length * S.mercredis * S.duree;
     intro = `<h2>Soutien 1D — missions pacte</h2>
@@ -849,6 +888,7 @@ function renderGroupes(){
 
   $$(".grp input[data-f]", body).forEach(inp => inp.onchange = () => {
     const g = liste.find(x => x.id === inp.closest(".grp").dataset.g); g[inp.dataset.f] = inp.value.trim(); changed();
+    if (inp.dataset.f === "intervenant" && gCur === "apc") renderGroupes();
   });
   $$("select[data-act=move]", body).forEach(sel => sel.onchange = () => {
     const g = liste.find(x => x.id === sel.dataset.g), id = sel.dataset.e;
@@ -873,6 +913,23 @@ function renderGroupes(){
     sel.className = sel.value; changed(); renderAccordCounts();
   });
   renderAccordCounts();
+}
+function repartitionHTML(liste){
+  const ens = intervenantsAPC(), lignes = [];
+  ens.forEach(e => {
+    const gs = liste.filter(g => g.intervenant === e.nom);
+    const nb = gs.reduce((t, g) => t + g.eleves.length, 0);
+    const over = gs.length > e.capacite;
+    lignes.push(`<tr><td><b>${esc(e.nom)}</b>${e.quotite ? ` <span class="tag">${esc(e.quotite)}</span>` : ""}</td><td>${esc(e.classe || "—")}</td>
+      <td style="color:${over ? "var(--b)" : gs.length < e.capacite ? "var(--muted)" : "var(--s)"};font-weight:700">${gs.length} / ${e.capacite}</td><td>${nb}</td>
+      <td>${gs.map(g => `<span class="tag">${esc(g.titre)}</span>`).join("") || "<span style='color:var(--muted)'>—</span>"}</td></tr>`);
+  });
+  R().dispenses.forEach(c => lignes.push(`<tr style="color:var(--muted)"><td>${esc(R().enseignants[c] || "")}</td><td>${esc(c)}</td><td colspan="3">Ne fait pas d'APC</td></tr>`));
+  const sans = liste.filter(g => !ens.some(e => e.nom === g.intervenant));
+  return `<div class="card tscroll"><h3 style="margin-top:0">Répartition par enseignant</h3>
+    <table><thead><tr><th>Enseignant(e)</th><th>Classe</th><th>Groupes</th><th>Élèves</th><th>Groupes confiés</th></tr></thead><tbody>${lignes.join("")}</tbody></table>
+    ${sans.length ? `<div class="waitlist" style="margin-top:10px"><b>Sans intervenant (${sans.length}) :</b> ${sans.map(g => esc(g.titre)).join(", ")} — plus de place chez les collègues : augmentez le nombre de groupes par enseignant ou ajoutez un renfort dans les Réglages.</div>` : ""}
+  </div>`;
 }
 function accordsHTML(ss, si){
   const cand = candidatsSRAN(ss);
@@ -944,6 +1001,64 @@ function exporterExcel(){
   XLSX.writeFile(wb, `Evaluations_groupes_Jean_Aicard_${ANNEE}.xlsx`);
 }
 
+/* ---------- Fichier d'une classe, pour l'enseignant(e) ---------- */
+function classeWorkbook(c){
+  const wb = XLSX.utils.book_new();
+  const el = DATA.eleves.filter(e => e.classe === c);
+  const ids = new Set(el.map(e => e.id));
+  const feuille = (rows, w) => { const ws = XLSX.utils.aoa_to_sheet(rows); ws["!cols"] = w.map(x => ({ wch: x })); return ws; };
+  const lib = { B:"à besoins", F:"fragile", S:"satisfaisant" };
+
+  const syn = [
+    [`École élémentaire Jean Aicard — Évaluations nationales ${ANNEE}`],
+    [`Classe ${c} — ${R().enseignants[c] || ""}`],
+    ["Document réservé à l'enseignant(e) de la classe et à l'équipe directement concernée par le suivi des élèves (RGPD)."],
+    [],
+    ["Nom", "Prénom", "Niveau", "Besoin français", "Besoin maths", "Besoin global", "APC", "Soutien 1D", "SRAN", "Accord SRAN"]
+  ];
+  [...el].sort((a,b) => indiceMax(b) - indiceMax(a)).forEach(e => {
+    const pf = profil(e,"F"), pm = profil(e,"M"), d = dispositifs(e.id);
+    const g = (x) => d.filter(y => y.d === x).map(y => [y.g.titre, y.g.jour, y.g.horaire].filter(Boolean).join(" — ")).join(" ; ");
+    syn.push([e.nom, e.prenom, e.niveau, pf ? NV_LIB[pf.niv] ?? "abs." : "", pm ? NV_LIB[pm.niv] ?? "abs." : "",
+      NV_LIB[besoin(e)] ?? "", g("apc"), g("s1d"), g("sran"), DATA.accords[e.id] || ""]);
+  });
+  syn.push([], ["N3 : grande difficulté · N2 : besoins · N1 : fragilités · — : sans besoin repéré"]);
+  XLSX.utils.book_append_sheet(wb, feuille(syn, [20,14,7,10,10,10,34,30,30,10]), "Synthèse");
+
+  // Groupes : ceux de la classe (APC) et, pour S1D/SRAN, les seuls élèves de la classe
+  const gr = [["Dispositif", "Groupe", "Pris en charge par", "Jour", "Horaire", "Nbre séances", "Compétences à travailler", "Élèves de la classe"]];
+  ["apc","s1d","sran"].forEach(d => DATA.groupes[d].forEach(g => {
+    const siens = g.eleves.filter(id => ids.has(id)); if (!siens.length) return;
+    gr.push([DLIB[d], g.titre, g.intervenant, g.jour, g.horaire, g.seances,
+      competencesCibles(g.eleves, d === "apc" ? [g.matiere] : ["F","M"]).join(" ; "),
+      siens.map(byId).map(nomComplet).join(", ")]);
+  }));
+  XLSX.utils.book_append_sheet(wb, feuille(gr, [10,26,22,16,14,8,50,70]), "Groupes");
+
+  // Détail des scores par compétence
+  [...new Set(el.map(e => e.niveau))].forEach(nv => ["F","M"].forEach(m => {
+    const comps = DATA.competences[`${nv}|${m}`]; if (!comps) return;
+    const rows = [["Nom", "Prénom", "Besoin", "Indice", ...comps.map(x => x.nom)]];
+    el.filter(e => e.niveau === nv && e.res[m]).map(e => ({ e, p: profil(e, m) }))
+      .sort((a,b) => (b.p.ind ?? -1) - (a.p.ind ?? -1))
+      .forEach(({ e, p }) => rows.push([e.nom, e.prenom, NV_LIB[p.niv] ?? "abs.", p.ind ?? "",
+        ...e.res[m].map(r => r.s != null ? `${r.s}/${r.m} — ${lib[r.g] || "non positionné"}` : "absent")]));
+    const nom = `${nv} ${m === "F" ? "français" : "maths"}`;
+    XLSX.utils.book_append_sheet(wb, feuille(rows, [20,14,8,7, ...comps.map(() => 22)]), nom);
+  }));
+  return wb;
+}
+function exporterClasse(c){
+  if (typeof XLSX === "undefined") { alert("La bibliothèque Excel n'est pas chargée."); return; }
+  XLSX.writeFile(classeWorkbook(c), `Evaluations_${c.replace(/\//g, "-")}_${ANNEE}.xlsx`);
+}
+$("#cExport").onclick = () => { const c = $("#cClasse").value; if (c) exporterClasse(c); };
+$("#cExportAll").onclick = async () => {
+  const cl = classes(); if (!cl.length) return;
+  if (!confirm(`Télécharger ${cl.length} fichiers, un par classe ? Le navigateur peut vous demander d'autoriser les téléchargements multiples.`)) return;
+  for (const c of cl) { exporterClasse(c); await new Promise(r => setTimeout(r, 500)); }
+};
+
 /* =====================================================================
    11) RÉGLAGES
    ===================================================================== */
@@ -964,6 +1079,7 @@ function renderReglages(){
       <div class="row"><span>Public (niveau de besoin minimal dans la discipline)</span><select data-path="apc.niveauMin">${[3,2,1].map(v => `<option value="${v}" ${S.apc.niveauMin === v ? "selected" : ""}>N${v}${v < 3 ? " et plus" : ""}</option>`).join("")}</select></div>
       <div class="row"><span>Élèves par groupe — minimum</span>${nb("apc.min", S.apc.min, 1, 1, 20)}</div>
       <div class="row"><span>Élèves par groupe — maximum</span>${nb("apc.max", S.apc.max, 1, 1, 20)}</div>
+      <div class="row"><span>Groupes par enseignant(e) et par période</span>${nb("apc.capacite", capaciteAPC(), 1, 0, 6)}</div>
       <div class="row"><span>Compléter jusqu'au minimum avec les élèves suivants</span><select data-path="apc.completer"><option value="true" ${S.apc.completer ? "selected" : ""}>Oui</option><option value="false" ${!S.apc.completer ? "selected" : ""}>Non</option></select></div>
     </div>
     <div class="card"><h3 style="margin-top:0">Soutien 1D</h3>
@@ -989,7 +1105,17 @@ function renderReglages(){
     <div class="card"><h3 style="margin-top:0">Enseignants des classes</h3>
       ${ORDRE_CLASSES.map(c => `<div class="teach"><b>${c}</b><input data-ens="${c}" value="${esc(S.enseignants[c] || "")}">
         <label style="font-size:12px;display:flex;gap:4px;align-items:center"><input type="checkbox" data-disp="${c}" ${S.dispenses.includes(c) ? "checked" : ""}> dispensé(e)</label></div>`).join("")}
-      <div class="rule">« Dispensé(e) » : l'enseignant(e) n'assure pas d'APC ; ses groupes sont marqués « À désigner ».</div>
+      <div class="rule">« Dispensé(e) » : l'enseignant(e) n'assure pas d'APC ; les groupes de sa classe sont confiés à des collègues.</div>
+    </div>
+    <div class="card"><h3 style="margin-top:0">Renforts APC</h3>
+      <p style="font-size:13px;color:var(--muted);margin-top:0">Collègues sans classe évaluée qui prennent des groupes d'APC (temps partagé, ULIS, directrice…).</p>
+      ${renforts().map((r, i) => `<div class="teach" style="grid-template-columns:1fr 70px 60px 30px">
+        <input data-renf="${i}" data-k="nom" value="${esc(r.nom)}" placeholder="Nom">
+        <input data-renf="${i}" data-k="quotite" value="${esc(r.quotite || "")}" placeholder="Quotité">
+        <input data-renf="${i}" data-k="groupes" type="number" min="0" max="6" value="${r.groupes}" title="Nombre de groupes">
+        <button class="small danger" data-delrenf="${i}" title="Retirer">✕</button></div>`).join("")}
+      <div style="font-size:12px;color:var(--muted);margin:2px 0 8px">Nom · quotité · nombre de groupes par période</div>
+      <button class="small" id="addRenf">+ Ajouter un renfort</button>
     </div>
     <div class="card"><h3 style="margin-top:0">Données ${ANNEE}</h3>
       <p style="font-size:14px;margin-top:0">${DATA.eleves.length} élèves · ${Object.keys(DATA.fichiers).length} fichiers importés.</p>
@@ -1019,6 +1145,12 @@ function renderReglages(){
   $$("#sets [data-disp]").forEach(inp => inp.onchange = () => {
     S.dispenses = $$("#sets [data-disp]:checked").map(x => x.dataset.disp); changed();
   });
+  $$("#sets [data-renf]").forEach(inp => inp.onchange = () => {
+    const r = renforts()[+inp.dataset.renf], k = inp.dataset.k;
+    r[k] = k === "groupes" ? Math.max(0, +inp.value || 0) : inp.value.trim(); changed();
+  });
+  $$("#sets [data-delrenf]").forEach(b => b.onclick = () => { R().renforts.splice(+b.dataset.delrenf, 1); changed(); renderReglages(); });
+  $("#addRenf").onclick = () => { (R().renforts ||= []).push({ nom: "", quotite: "", groupes: 1 }); changed(); renderReglages(); };
   $("#resetSets").onclick = () => { if (!confirm("Rétablir tous les réglages par défaut ?")) return; DATA.reglages = structuredClone(REGLAGES_DEFAUT); changed(); renderReglages(); };
   $("#wipe").onclick = () => {
     if (!confirm(`Effacer tous les résultats, groupes et accords enregistrés pour ${ANNEE} ? Cette action est définitive.`)) return;
@@ -1047,6 +1179,14 @@ async function demarrer(){
   try {
     const d = await store.load();
     if (d) { DATA = Object.assign(vide(), d); DATA.reglages = Object.assign(structuredClone(REGLAGES_DEFAUT), d.reglages || {}); }
+    Object.values(DATA.competences).forEach(l => l.forEach(c => c.nom = String(c.nom || "").replace(/\s+/g, " ").trim()));
+    if (d && (d.reglages?.version || 1) < 2) {
+      const r = DATA.reglages;
+      if (!r.dispenses.includes("CE1/CE2")) r.dispenses.push("CE1/CE2");
+      if (!r.renforts) r.renforts = structuredClone(REGLAGES_DEFAUT.renforts);
+      if (r.apc.capacite == null) r.apc.capacite = 2;
+      r.version = 2;
+    }
   } catch (e) {
     $("#v-import").insertAdjacentHTML("afterbegin", `<div class="notice">Lecture des données impossible (${esc(e.code || e.message)}). Vérifiez les règles Firestore de la collection « evaluations ».</div>`);
   }
