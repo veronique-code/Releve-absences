@@ -708,6 +708,18 @@ function intervenantDe(c){ return R().dispenses.includes(c) ? "À désigner" : (
 const FORMULES = { "2x30": "2 × 30 min", "1x60": "1 × 1 h" };
 const formuleDe = (c) => (R().formules || {})[c] || "2x30";
 const capaciteAPC = (c) => formuleDe(c) === "1x60" ? 1 : 2;
+const JOURS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi"];
+/* Créneaux d'un groupe d'APC : 2 lignes s'il est vu 2 × 30 min dans la semaine, 1 sinon */
+function creneaux(g, liste){
+  const n = dureeGroupe(g, liste).startsWith("2 ×") ? 2 : 1;
+  if (!Array.isArray(g.creneaux)) g.creneaux = [{ jour: JOURS.includes(g.jour) ? g.jour : "", horaire: g.horaire || "" }];
+  while (g.creneaux.length < n) g.creneaux.push({ jour: "", horaire: "" });
+  return g.creneaux.slice(0, n);
+}
+function horaireTexte(g, liste){
+  if (g.disp !== "apc") return [g.jour, g.horaire].filter(Boolean).join(" ");
+  return creneaux(g, liste).map(c => [c.jour, c.horaire].filter(Boolean).join(" ")).filter(Boolean).join(" et ");
+}
 function dureeGroupe(g, liste){
   const e = intervenantsAPC().find(x => x.nom === g.intervenant); if (!e) return "";
   if (!e.classe) return e.quotite ? `selon quotité (${e.quotite})` : "";
@@ -880,10 +892,15 @@ function groupeHTML(g, liste){
       <span class="count ${bad ? "bad" : ""}" title="Entre ${S.min} et ${S.max} élèves">${n} élève${n > 1 ? "s" : ""}</span></div>
     <div class="fields">
       <div><label class="f">Pris en charge par</label><input data-f="intervenant" list="intervenantsList" value="${esc(g.intervenant)}" placeholder="Nom de l'enseignant(e)"></div>
-      <div><label class="f">Jour</label><input data-f="jour" value="${esc(g.jour)}"></div>
-      ${g.disp === "apc" ? `<div style="grid-column:span 2"><label class="f">Temps hebdomadaire</label><div style="font-size:13px;font-weight:600">${esc(dureeGroupe(g, liste) || "—")}</div></div>` : ""}
+      ${g.disp === "apc" ? `<div><label class="f">Nombre de séances (période)</label><input data-f="seances" value="${esc(g.seances)}"></div>
+      <div style="grid-column:span 2"><label class="f">Temps hebdomadaire</label><div style="font-size:13px;font-weight:600">${esc(dureeGroupe(g, liste) || "—")}</div></div>
+      ${creneaux(g, liste).map((c, k, all) => `<div style="grid-column:span 2;display:grid;grid-template-columns:${all.length > 1 ? "68px " : ""}1fr 1fr;gap:6px;align-items:end">
+        ${all.length > 1 ? `<span style="font-size:12px;font-weight:600;color:var(--muted);padding-bottom:7px">Séance ${k + 1}</span>` : ""}
+        <div><label class="f">Jour</label><select data-cr="${k}" data-ck="jour" style="width:100%;font-size:13px;padding:5px 7px"><option value=""></option>${JOURS.map(j => `<option ${c.jour === j ? "selected" : ""}>${j}</option>`).join("")}</select></div>
+        <div><label class="f">Horaire</label><input data-cr="${k}" data-ck="horaire" value="${esc(c.horaire)}" placeholder="ex. 16h30–17h00"></div></div>`).join("")}`
+      : `<div><label class="f">Jour</label><input data-f="jour" value="${esc(g.jour)}"></div>
       <div><label class="f">Horaire</label><input data-f="horaire" value="${esc(g.horaire)}" placeholder="ex. 16h30–17h30"></div>
-      <div><label class="f">Nombre de séances</label><input data-f="seances" value="${esc(g.seances)}"></div>
+      <div><label class="f">Nombre de séances</label><input data-f="seances" value="${esc(g.seances)}"></div>`}
     </div>
     ${cibles.length ? `<div class="comps"><b>Compétences à travailler :</b> ${cibles.map(esc).join(" · ")}</div>` : ""}
     <div class="chips">${g.eleves.map(id => chipHTML(g, id, autres)).join("") || `<span style="color:var(--muted);font-size:13px">Aucun élève</span>`}</div>
@@ -940,6 +957,10 @@ function renderGroupes(){
   $$(".grp input[data-f]", body).forEach(inp => inp.onchange = () => {
     const g = liste.find(x => x.id === inp.closest(".grp").dataset.g); g[inp.dataset.f] = inp.value.trim(); changed();
     if (inp.dataset.f === "intervenant" && gCur === "apc") renderGroupes();
+  });
+  $$("[data-cr]", body).forEach(inp => inp.onchange = () => {
+    const g = liste.find(x => x.id === inp.closest(".grp").dataset.g);
+    creneaux(g, liste); g.creneaux[+inp.dataset.cr][inp.dataset.ck] = inp.value.trim(); changed();
   });
   $$("select[data-act=move]", body).forEach(sel => sel.onchange = () => {
     const g = liste.find(x => x.id === sel.dataset.g), id = sel.dataset.e;
@@ -1018,7 +1039,7 @@ function exporterExcel(){
   const apc = [["Enseignant(e)", "Classe", "Niveau(x)", "Nbre élèves", "Jours et horaires", "Nbre séances", "Domaine", "Compétences", "Élèves", "Bilan", "Continuité (APC, SRAN, Soutien 1D, …)"]];
   DATA.groupes.apc.forEach(g => {
     const nivs = [...new Set(g.eleves.map(byId).filter(Boolean).map(e => e.niveau))].join("/");
-    apc.push([g.intervenant, g.classe, nivs, g.eleves.length, [g.jour, g.horaire, dureeGroupe(g, DATA.groupes.apc)].filter(Boolean).join(" — "), g.seances, MATS[g.matiere],
+    apc.push([g.intervenant, g.classe, nivs, g.eleves.length, [horaireTexte(g, DATA.groupes.apc), dureeGroupe(g, DATA.groupes.apc)].filter(Boolean).join(" — "), g.seances, MATS[g.matiere],
       competencesCibles(g.eleves, [g.matiere]).join(" ; "), noms(g.eleves), "", contin(g.eleves, "apc")]);
   });
   const feuille = (rows, w) => { const ws = XLSX.utils.aoa_to_sheet(rows); ws["!cols"] = w.map(x => ({ wch: x })); return ws; };
@@ -1072,7 +1093,7 @@ function classeWorkbook(c){
   ];
   [...el].sort((a,b) => indiceMax(b) - indiceMax(a)).forEach(e => {
     const pf = profil(e,"F"), pm = profil(e,"M"), d = dispositifs(e.id);
-    const g = (x) => d.filter(y => y.d === x).map(y => [y.g.titre, y.g.jour, y.g.horaire].filter(Boolean).join(" — ")).join(" ; ");
+    const g = (x) => d.filter(y => y.d === x).map(y => [y.g.titre, horaireTexte(y.g, DATA.groupes[y.d])].filter(Boolean).join(" — ")).join(" ; ");
     syn.push([e.nom, e.prenom, e.niveau, pf ? NV_LIB[pf.niv] ?? "abs." : "", pm ? NV_LIB[pm.niv] ?? "abs." : "",
       NV_LIB[besoin(e)] ?? "", g("apc"), g("s1d"), g("sran"), DATA.accords[e.id] || ""]);
   });
@@ -1080,10 +1101,10 @@ function classeWorkbook(c){
   XLSX.utils.book_append_sheet(wb, feuille(syn, [20,14,7,10,10,10,34,30,30,10]), "Synthèse");
 
   // Groupes : ceux de la classe (APC) et, pour S1D/SRAN, les seuls élèves de la classe
-  const gr = [["Dispositif", "Groupe", "Pris en charge par", "Jour", "Horaire", "Nbre séances", "Compétences à travailler", "Élèves de la classe"]];
+  const gr = [["Dispositif", "Groupe", "Pris en charge par", "Jours et horaires", "Temps hebdomadaire", "Nbre séances", "Compétences à travailler", "Élèves de la classe"]];
   ["apc","s1d","sran"].forEach(d => DATA.groupes[d].forEach(g => {
     const siens = g.eleves.filter(id => ids.has(id)); if (!siens.length) return;
-    gr.push([DLIB[d], g.titre, g.intervenant, g.jour, g.horaire, g.seances,
+    gr.push([DLIB[d], g.titre, g.intervenant, horaireTexte(g, DATA.groupes[d]), d === "apc" ? dureeGroupe(g, DATA.groupes.apc) : "", g.seances,
       competencesCibles(g.eleves, d === "apc" ? [g.matiere] : ["F","M"]).join(" ; "),
       siens.map(byId).map(nomComplet).join(", ")]);
   }));
