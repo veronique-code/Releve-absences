@@ -315,7 +315,7 @@ const NV_TXT = { 3:"N3 — grande difficulté", 2:"N2 — besoins", 1:"N1 — fr
 
 const REGLAGES_DEFAUT = {
   seuils: { n3: 50, n2: 25, n1: 10 },
-  apc:  { niveauMin: 3, min: 6, max: 8, completer: true, capacite: 2 },
+  apc:  { niveauMin: 3, min: 6, max: 8, completer: true },
   s1d:  { niveaux: ["CP","CE1"], publics: [2], min: 6, max: 11, heures: 24, mercredis: 4, duree: 1.5 },
   sran: { publics: [2,3], min: 6, max: 11, sessions: [
             { nom: "Vacances d'automne — semaine 1", niveaux: ["CE1","CE2"], enseignants: 2 },
@@ -704,7 +704,17 @@ function majoritaire(ids){
   return m > f ? "M" : "F";
 }
 function intervenantDe(c){ return R().dispenses.includes(c) ? "À désigner" : (R().enseignants[c] || ""); }
-const capaciteAPC = () => R().apc.capacite ?? 2;
+/* Chaque enseignant(e) fait 1 h d'APC par semaine : 2 × 30 min (jusqu'à 2 groupes) ou 1 × 1 h (1 groupe) */
+const FORMULES = { "2x30": "2 × 30 min", "1x60": "1 × 1 h" };
+const formuleDe = (c) => (R().formules || {})[c] || "2x30";
+const capaciteAPC = (c) => formuleDe(c) === "1x60" ? 1 : 2;
+function dureeGroupe(g, liste){
+  const e = intervenantsAPC().find(x => x.nom === g.intervenant); if (!e) return "";
+  if (!e.classe) return e.quotite ? `selon quotité (${e.quotite})` : "";
+  const n = liste.filter(x => x.intervenant === e.nom).length;
+  if (formuleDe(e.classe) === "1x60") return "1 h par semaine";
+  return n >= 2 ? "30 min par semaine" : "2 × 30 min par semaine";
+}
 const renforts = () => R().renforts || [];
 /* Liste des enseignants qui font APC, avec le nombre de groupes qu'ils peuvent prendre */
 function intervenantsAPC(){
@@ -712,7 +722,7 @@ function intervenantsAPC(){
   ORDRE_CLASSES.forEach(c => {
     if (R().dispenses.includes(c) || !R().enseignants[c]) return;
     const nivs = NIVEAUX.filter(n => c.includes(n));
-    out.push({ nom: R().enseignants[c], classe: c, niv: nivs.map(n => NIVEAUX.indexOf(n)), capacite: capaciteAPC() });
+    out.push({ nom: R().enseignants[c], classe: c, niv: nivs.map(n => NIVEAUX.indexOf(n)), capacite: capaciteAPC(c), formule: formuleDe(c) });
   });
   renforts().filter(r => r.nom && +r.groupes > 0).forEach(r => out.push({ nom: r.nom, classe: "", niv: null, capacite: +r.groupes, quotite: r.quotite }));
   return out;
@@ -871,6 +881,7 @@ function groupeHTML(g, liste){
     <div class="fields">
       <div><label class="f">Pris en charge par</label><input data-f="intervenant" list="intervenantsList" value="${esc(g.intervenant)}" placeholder="Nom de l'enseignant(e)"></div>
       <div><label class="f">Jour</label><input data-f="jour" value="${esc(g.jour)}"></div>
+      ${g.disp === "apc" ? `<div style="grid-column:span 2"><label class="f">Temps hebdomadaire</label><div style="font-size:13px;font-weight:600">${esc(dureeGroupe(g, liste) || "—")}</div></div>` : ""}
       <div><label class="f">Horaire</label><input data-f="horaire" value="${esc(g.horaire)}" placeholder="ex. 16h30–17h30"></div>
       <div><label class="f">Nombre de séances</label><input data-f="seances" value="${esc(g.seances)}"></div>
     </div>
@@ -960,17 +971,18 @@ function repartitionHTML(liste){
     const gs = liste.filter(g => g.intervenant === e.nom);
     const nb = gs.reduce((t, g) => t + g.eleves.length, 0);
     const over = gs.length > e.capacite;
-    lignes.push(`<tr><td><b>${esc(e.nom)}</b>${e.quotite ? ` <span class="tag">${esc(e.quotite)}</span>` : ""}</td><td>${esc(e.classe || "—")}</td>
+    const temps = !e.classe ? (e.quotite || "—") : e.formule === "1x60" ? "1 × 1 h" : gs.length >= 2 ? "2 groupes × 30 min" : "1 groupe × 2 × 30 min";
+    lignes.push(`<tr><td><b>${esc(e.nom)}</b>${e.quotite ? ` <span class="tag">${esc(e.quotite)}</span>` : ""}</td><td>${esc(e.classe || "—")}</td><td>${esc(temps)}</td>
       <td style="color:${over ? "var(--b)" : gs.length < e.capacite ? "var(--muted)" : "var(--s)"};font-weight:700">${gs.length} / ${e.capacite}</td><td>${nb}</td>
       <td>${gs.map(g => `<span class="tag">${esc(g.titre)}</span>`).join("") || "<span style='color:var(--muted)'>—</span>"}</td></tr>`);
   });
-  R().dispenses.forEach(c => lignes.push(`<tr style="color:var(--muted)"><td>${esc(R().enseignants[c] || "")}</td><td>${esc(c)}</td><td colspan="3">Ne fait pas d'APC</td></tr>`));
+  R().dispenses.forEach(c => lignes.push(`<tr style="color:var(--muted)"><td>${esc(R().enseignants[c] || "")}</td><td>${esc(c)}</td><td colspan="4">Ne fait pas d'APC</td></tr>`));
   const sans = liste.filter(g => !ens.some(e => e.nom === g.intervenant));
   const vides = ens.filter(e => e.capacite > 0 && !liste.some(g => g.intervenant === e.nom));
   const avis = vides.length ? `<div class="notice" style="margin:0 0 10px">${vides.length} enseignant(e)(s) sans groupe : ${vides.map(e => esc(e.nom)).join(", ")}. Cliquez sur « Refaire les groupes APC » pour que chacun en ait au moins un.</div>` : "";
   return `<div class="card tscroll"><h3 style="margin-top:0">Répartition par enseignant</h3>${avis}
-    <table><thead><tr><th>Enseignant(e)</th><th>Classe</th><th>Groupes</th><th>Élèves</th><th>Groupes confiés</th></tr></thead><tbody>${lignes.join("")}</tbody></table>
-    ${sans.length ? `<div class="waitlist" style="margin-top:10px"><b>Sans intervenant (${sans.length}) :</b> ${sans.map(g => esc(g.titre)).join(", ")} — plus de place chez les collègues : augmentez le nombre de groupes par enseignant ou ajoutez un renfort dans les Réglages.</div>` : ""}
+    <table><thead><tr><th>Enseignant(e)</th><th>Classe</th><th>1 h par semaine</th><th>Groupes</th><th>Élèves</th><th>Groupes confiés</th></tr></thead><tbody>${lignes.join("")}</tbody></table>
+    ${sans.length ? `<div class="waitlist" style="margin-top:10px"><b>Sans intervenant (${sans.length}) :</b> ${sans.map(g => esc(g.titre)).join(", ")} — plus de place chez les collègues : passez des collègues en « 2 × 30 min » ou ajoutez un renfort dans les Réglages.</div>` : ""}
   </div>`;
 }
 function accordsHTML(ss, si){
@@ -1006,7 +1018,7 @@ function exporterExcel(){
   const apc = [["Enseignant(e)", "Classe", "Niveau(x)", "Nbre élèves", "Jours et horaires", "Nbre séances", "Domaine", "Compétences", "Élèves", "Bilan", "Continuité (APC, SRAN, Soutien 1D, …)"]];
   DATA.groupes.apc.forEach(g => {
     const nivs = [...new Set(g.eleves.map(byId).filter(Boolean).map(e => e.niveau))].join("/");
-    apc.push([g.intervenant, g.classe, nivs, g.eleves.length, [g.jour, g.horaire].filter(Boolean).join(" — "), g.seances, MATS[g.matiere],
+    apc.push([g.intervenant, g.classe, nivs, g.eleves.length, [g.jour, g.horaire, dureeGroupe(g, DATA.groupes.apc)].filter(Boolean).join(" — "), g.seances, MATS[g.matiere],
       competencesCibles(g.eleves, [g.matiere]).join(" ; "), noms(g.eleves), "", contin(g.eleves, "apc")]);
   });
   const feuille = (rows, w) => { const ws = XLSX.utils.aoa_to_sheet(rows); ws["!cols"] = w.map(x => ({ wch: x })); return ws; };
@@ -1121,7 +1133,6 @@ function renderReglages(){
       <div class="row"><span>Public (niveau de besoin minimal dans la discipline)</span><select data-path="apc.niveauMin">${[3,2,1].map(v => `<option value="${v}" ${S.apc.niveauMin === v ? "selected" : ""}>N${v}${v < 3 ? " et plus" : ""}</option>`).join("")}</select></div>
       <div class="row"><span>Élèves par groupe — minimum</span>${nb("apc.min", S.apc.min, 1, 1, 20)}</div>
       <div class="row"><span>Élèves par groupe — maximum</span>${nb("apc.max", S.apc.max, 1, 1, 20)}</div>
-      <div class="row"><span>Groupes par enseignant(e) et par période</span>${nb("apc.capacite", capaciteAPC(), 1, 0, 6)}</div>
       <div class="row"><span>Compléter jusqu'au minimum avec les élèves suivants</span><select data-path="apc.completer"><option value="true" ${S.apc.completer ? "selected" : ""}>Oui</option><option value="false" ${!S.apc.completer ? "selected" : ""}>Non</option></select></div>
     </div>
     <div class="card"><h3 style="margin-top:0">Soutien 1D</h3>
@@ -1145,9 +1156,10 @@ function renderReglages(){
       <button class="small" id="addSess" style="margin-top:8px">+ Ajouter une session</button>
     </div>
     <div class="card"><h3 style="margin-top:0">Enseignants des classes</h3>
-      ${ORDRE_CLASSES.map(c => `<div class="teach"><b>${c}</b><input data-ens="${c}" value="${esc(S.enseignants[c] || "")}">
+      ${ORDRE_CLASSES.map(c => `<div class="teach" style="grid-template-columns:62px 1fr 108px 82px"><b>${c}</b><input data-ens="${c}" value="${esc(S.enseignants[c] || "")}">
+        <select data-form="${c}" ${S.dispenses.includes(c) ? "disabled" : ""} style="font-size:13px;padding:5px">${Object.entries(FORMULES).map(([k, v]) => `<option value="${k}" ${formuleDe(c) === k ? "selected" : ""}>${v}</option>`).join("")}</select>
         <label style="font-size:12px;display:flex;gap:4px;align-items:center"><input type="checkbox" data-disp="${c}" ${S.dispenses.includes(c) ? "checked" : ""}> dispensé(e)</label></div>`).join("")}
-      <div class="rule">« Dispensé(e) » : l'enseignant(e) n'assure pas d'APC ; les groupes de sa classe sont confiés à des collègues.</div>
+      <div class="rule">Chaque enseignant(e) fait 1 h d'APC par semaine : <b>2 × 30 min</b> (deux groupes de 30 min, ou un groupe deux fois) ou <b>1 × 1 h</b> (un groupe). « Dispensé(e) » : pas d'APC ; les élèves de la classe sont confiés à des collègues. Après un changement, refaites les groupes APC.</div>
     </div>
     <div class="card"><h3 style="margin-top:0">Renforts APC</h3>
       <p style="font-size:13px;color:var(--muted);margin-top:0">Collègues sans classe évaluée qui prennent des groupes d'APC (temps partagé, ULIS, directrice…).</p>
@@ -1184,8 +1196,9 @@ function renderReglages(){
   $$("#sets [data-delsess]").forEach(b => b.onclick = () => { S.sran.sessions.splice(+b.dataset.delsess, 1); changed(); renderReglages(); });
   $("#addSess").onclick = () => { S.sran.sessions.push({ nom: "Nouvelle session", niveaux: [], enseignants: 1 }); changed(); renderReglages(); };
   $$("#sets [data-ens]").forEach(inp => inp.onchange = () => { S.enseignants[inp.dataset.ens] = inp.value.trim(); changed(); });
+  $$("#sets [data-form]").forEach(sel => sel.onchange = () => { (S.formules ||= {})[sel.dataset.form] = sel.value; changed(); });
   $$("#sets [data-disp]").forEach(inp => inp.onchange = () => {
-    S.dispenses = $$("#sets [data-disp]:checked").map(x => x.dataset.disp); changed();
+    S.dispenses = $$("#sets [data-disp]:checked").map(x => x.dataset.disp); changed(); renderReglages();
   });
   $$("#sets [data-renf]").forEach(inp => inp.onchange = () => {
     const r = renforts()[+inp.dataset.renf], k = inp.dataset.k;
@@ -1226,7 +1239,6 @@ async function demarrer(){
       const r = DATA.reglages;
       if (!r.dispenses.includes("CE1/CE2")) r.dispenses.push("CE1/CE2");
       if (!r.renforts) r.renforts = structuredClone(REGLAGES_DEFAUT.renforts);
-      if (r.apc.capacite == null) r.apc.capacite = 2;
       r.version = 2;
     }
   } catch (e) {
