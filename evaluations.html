@@ -762,7 +762,32 @@ function genAPC(){
         intervenant: intervenantDe(c), eleves: ids.slice(0, S.max), attente: ids.slice(S.max) });
     });
   });
-  return repartirAPC(out);
+  return completerAPC(repartirAPC(out));
+}
+/* Un(e) enseignant(e) toujours sans groupe reçoit un groupe formé avec les élèves
+   les plus fragiles d'une classe (la sienne, sinon une classe dont l'enseignant(e)
+   ne fait pas d'APC) qui n'ont pas encore d'APC. */
+function completerAPC(groupes){
+  const S = R().apc, ens = intervenantsAPC();
+  const pris = () => new Set(groupes.flatMap(g => g.eleves));
+  ens.filter(e => e.capacite > 0 && !groupes.some(g => g.intervenant === e.nom)).forEach(e => {
+    const sources = e.classe ? [e.classe] : R().dispenses.filter(c => DATA.eleves.some(x => x.classe === c));
+    for (const c of sources) {
+      const deja = pris();
+      const libres = DATA.eleves.filter(x => x.classe === c && !deja.has(x.id) && besoin(x) >= 1)
+        .sort((a, b) => indiceMax(b) - indiceMax(a));
+      if (!libres.length) continue;
+      const m = dominante(libres[0]);
+      const ranked = libres.map(x => ({ x, p: profil(x, m) })).filter(o => o.p && o.p.ind != null).sort((a, b) => b.p.ind - a.p.ind);
+      const ids = ranked.slice(0, S.max).map(o => o.x.id);
+      if (!ids.length) continue;
+      const nb = groupes.filter(g => g.classe === c && g.matiere === m).length;
+      groupes.push({ id: uid(), disp: "apc", classe: c, matiere: m, titre: `${c} — ${MATS[m]}${nb ? " (2)" : ""}`,
+        jour: "", horaire: "", seances: "", note: "", intervenant: e.nom, eleves: ids, attente: [] });
+      break;
+    }
+  });
+  return groupes;
 }
 function genS1D(){
   const S = R().s1d, out = [];
@@ -941,7 +966,9 @@ function repartitionHTML(liste){
   });
   R().dispenses.forEach(c => lignes.push(`<tr style="color:var(--muted)"><td>${esc(R().enseignants[c] || "")}</td><td>${esc(c)}</td><td colspan="3">Ne fait pas d'APC</td></tr>`));
   const sans = liste.filter(g => !ens.some(e => e.nom === g.intervenant));
-  return `<div class="card tscroll"><h3 style="margin-top:0">Répartition par enseignant</h3>
+  const vides = ens.filter(e => e.capacite > 0 && !liste.some(g => g.intervenant === e.nom));
+  const avis = vides.length ? `<div class="notice" style="margin:0 0 10px">${vides.length} enseignant(e)(s) sans groupe : ${vides.map(e => esc(e.nom)).join(", ")}. Cliquez sur « Refaire les groupes APC » pour que chacun en ait au moins un.</div>` : "";
+  return `<div class="card tscroll"><h3 style="margin-top:0">Répartition par enseignant</h3>${avis}
     <table><thead><tr><th>Enseignant(e)</th><th>Classe</th><th>Groupes</th><th>Élèves</th><th>Groupes confiés</th></tr></thead><tbody>${lignes.join("")}</tbody></table>
     ${sans.length ? `<div class="waitlist" style="margin-top:10px"><b>Sans intervenant (${sans.length}) :</b> ${sans.map(g => esc(g.titre)).join(", ")} — plus de place chez les collègues : augmentez le nombre de groupes par enseignant ou ajoutez un renfort dans les Réglages.</div>` : ""}
   </div>`;
