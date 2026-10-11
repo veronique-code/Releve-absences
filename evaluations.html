@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Évaluations nationales — Espace direction</title>
+<link rel="icon" href="icon-192.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600;700&display=swap');
+  :root{
+    --bg:#F6F3FB; --card:#FFFFFF; --ink:#453B62; --muted:#7A719A; --line:#E7E0F2;
+    --accent:#8A6BB8; --accent-soft:#EFE9F8;
+    --b:#C2624B; --b-soft:#FDECE4; --b-mid:#F2A08E;
+    --f:#9A6A12; --f-soft:#FDF3DC; --f-mid:#F3C97E;
+    --s:#3E9080; --s-soft:#E3F5EE; --s-mid:#86CBB4;
+    --a:#8C87A0; --a-soft:#F1F0F4;
+    --danger:#C2624B;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.45}
+  header{background:linear-gradient(135deg,#CFE7F7 0%,#E2D9F6 52%,#FBDCD0 100%);padding:18px 16px 0}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+  header .top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  header a{color:var(--accent);text-decoration:none;font-size:14px;font-weight:600}
+  header h1{font-family:'Fraunces',serif;font-weight:600;font-size:24px;margin:0;flex:1}
+  #userBox{font-size:13px;display:flex;gap:8px;align-items:center}
+  #saveState{font-size:12px;color:var(--muted);white-space:nowrap}
+  nav.tabs{display:flex;gap:4px;margin-top:14px;overflow-x:auto;scrollbar-width:none}
+  nav.tabs::-webkit-scrollbar{display:none}
+  nav.tabs button{border:0;background:rgba(255,255,255,.45);border-radius:10px 10px 0 0;padding:9px 14px;color:var(--ink);font-weight:600;font-size:14px;white-space:nowrap}
+  nav.tabs button.on{background:var(--bg)}
+  nav.tabs button:disabled{opacity:.45;cursor:default}
+  button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.ghost{background:rgba(255,255,255,.7);color:var(--muted);padding:5px 12px;border-radius:999px}
+  button.danger{color:var(--danger);border-color:#f3c5c0}
+  button.small{padding:4px 10px;font-size:13px}
+  button:disabled{opacity:.5;cursor:default}
+  main{padding:22px 16px 70px}
+  input,select,textarea{font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+  textarea{width:100%;min-height:60px;resize:vertical}
+  label.f{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:0 0 3px}
+  h2{font-family:'Fraunces',serif;font-weight:600;font-size:21px;margin:0 0 6px}
+  h3{font-size:15px;margin:22px 0 10px;color:var(--accent)}
+  .lead{color:var(--muted);margin:0 0 18px;max-width:75ch}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .bar .grow{flex:1}
+  .hidden{display:none!important}
+  .notice{background:#fff8e1;border:1px solid #f2dfa0;color:#7a5a00;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:14px}
+  .rgpd{background:var(--accent-soft);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:14px}
+  .empty{text-align:center;color:var(--muted);padding:36px 10px}
+  #login{text-align:center;padding:60px 10px}
+
+  /* Import */
+  #drop{border:2px dashed #CBBDE6;border-radius:14px;background:#fff;padding:34px 18px;text-align:center;cursor:pointer;transition:background .15s,border-color .15s}
+  #drop.over{background:var(--accent-soft);border-color:var(--accent)}
+  #drop strong{display:block;font-size:17px;margin-bottom:4px}
+  #drop span{color:var(--muted);font-size:14px}
+  .log{font-size:13px;margin-top:12px;max-height:220px;overflow:auto}
+  .log div{padding:3px 0;border-bottom:1px solid #f3eff9}
+  .log .ok{color:var(--s)} .log .ko{color:var(--b)}
+  table{border-collapse:collapse;width:100%}
+  th,td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);font-size:14px;vertical-align:middle}
+  th{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+  .tscroll{overflow-x:auto}
+  .chk{color:var(--s);font-weight:700}
+  .miss{color:#d0c8e2}
+
+  /* Badges niveaux de besoin */
+  .nv{display:inline-block;min-width:34px;text-align:center;font-size:12px;font-weight:700;padding:2px 7px;border-radius:99px}
+  .nv3{background:var(--b-soft);color:var(--b)}
+  .nv2{background:var(--f-soft);color:var(--f)}
+  .nv1{background:#E4EFFA;color:#2F6FA8}
+  .nv0{background:var(--s-soft);color:var(--s)}
+  .nvx{background:var(--a-soft);color:var(--a)}
+  .tag{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:99px;background:var(--accent-soft);color:var(--accent);margin:1px 2px 1px 0;white-space:nowrap}
+
+  /* KPI */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .kpi b{display:block;font-size:26px;font-family:'Fraunces',serif;font-weight:600;line-height:1.1}
+  .kpi span{font-size:13px;color:var(--muted)}
+  .kpi.k3 b{color:var(--b)} .kpi.k2 b{color:var(--f)} .kpi.k1 b{color:#2F6FA8}
+
+  /* Barres empilées */
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:0 0 12px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  .cbar{display:grid;grid-template-columns:minmax(150px,280px) 1fr 52px;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid #f3eff9;font-size:14px}
+  .cbar .lab{overflow:hidden;text-overflow:ellipsis}
+  .stack{display:flex;height:18px;border-radius:5px;overflow:hidden;background:var(--a-soft)}
+  .stack i{display:block;height:100%}
+  .stack .sb{background:var(--b-mid)} .stack .sf{background:var(--f-mid)} .stack .ss{background:var(--s-mid)}
+  .cbar .pct{font-weight:700;color:var(--b);text-align:right;font-size:13px}
+  .lvgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:860px){ .lvgrid{grid-template-columns:1fr} }
+
+  /* Carte de chaleur */
+  .heat td,.heat th{text-align:center;padding:5px 4px;font-size:13px;border:1px solid #fff}
+  .heat th.vert{writing-mode:vertical-rl;transform:rotate(180deg);text-transform:none;letter-spacing:0;font-weight:600;color:var(--ink);font-size:11.5px;height:175px;width:44px;min-width:44px;max-width:44px;white-space:normal;line-height:1.15;padding:6px 3px;text-align:left;overflow:hidden}
+  .heat td.name,.heat th.name{text-align:left;white-space:nowrap;padding-left:8px}
+  .heat tr.clk{cursor:pointer}
+  .heat tr.clk:hover td.name{text-decoration:underline}
+  .cB{background:var(--b-soft);color:var(--b);font-weight:600}
+  .cF{background:var(--f-soft);color:var(--f);font-weight:600}
+  .cS{background:var(--s-soft);color:var(--s)}
+  .cA{background:var(--a-soft);color:var(--a)}
+
+  /* Groupes */
+  .subtabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .subtabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+  .grp{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+  .grp.warn{border-color:#F2C6B6}
+  .grp .gh{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+  .grp .gt{font-weight:700;font-size:15px}
+  .grp .gm{font-size:12.5px;color:var(--muted)}
+  .grp .count{font-size:12px;font-weight:700;padding:2px 9px;border-radius:99px;background:var(--s-soft);color:var(--s);white-space:nowrap}
+  .grp .count.bad{background:var(--b-soft);color:var(--b)}
+  .grp .fields{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .grp .fields input{width:100%;font-size:13px;padding:5px 7px}
+  .grp .comps{font-size:12.5px;background:#fbfaf7;border-radius:8px;padding:6px 8px}
+  .chips{display:flex;flex-direction:column;gap:3px}
+  .chip{display:grid;grid-template-columns:1fr auto auto auto;gap:6px;align-items:center;font-size:13.5px;padding:3px 4px 3px 8px;border-radius:7px;background:#faf8fd}
+  .chip:hover{background:var(--accent-soft)}
+  .chip .cl{font-size:11.5px;color:var(--muted)}
+  .chip select{font-size:12px;padding:2px 4px;max-width:120px;color:var(--muted)}
+  .addrow{display:flex;gap:6px}
+  .addrow input{flex:1;font-size:13px;padding:5px 8px}
+  .waitlist{font-size:12.5px;color:var(--b);background:var(--b-soft);border-radius:8px;padding:6px 8px}
+  .budget{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:14px}
+  .gauge{flex:1;min-width:160px;height:10px;background:var(--a-soft);border-radius:99px;overflow:hidden}
+  .gauge i{display:block;height:100%;background:var(--s-mid)}
+  .gauge.over i{background:var(--b-mid)}
+  .accord select{font-size:13px;padding:3px 6px}
+  .accord .oui{background:var(--s-soft)} .accord .non{background:var(--a-soft)}
+
+  /* Réglages */
+  .sets{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+  .sets .row{display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:center;margin-bottom:8px;font-size:14px}
+  .sets .row input,.sets .row select{width:100%}
+  .rule{font-size:13px;color:var(--muted);background:#fbfaf7;border-radius:8px;padding:8px 10px;margin-top:6px}
+  .teach{display:grid;grid-template-columns:80px 1fr 90px;gap:6px;align-items:center;margin-bottom:5px;font-size:14px}
+  .teach input{width:100%}
+
+  /* Fiche élève */
+  dialog{border:0;border-radius:14px;padding:0;max-width:760px;width:calc(100% - 24px);color:var(--ink);box-shadow:0 20px 60px rgba(69,59,98,.25)}
+  dialog::backdrop{background:rgba(69,59,98,.35)}
+  .dlg{padding:18px 20px}
+  .dlg .close{float:right}
+  .fiche .cbar{grid-template-columns:minmax(150px,1fr) 1.3fr 70px}
+  .fiche .stack{height:14px}
+  .fiche .sc{font-size:13px;text-align:right;font-weight:600}
+
+  .print-only{display:none}
+  @media (max-width:640px){
+    header h1{font-size:20px}
+    .cbar{grid-template-columns:1fr 70px}
+    .cbar .stack{grid-column:span 2;order:3}
+    .groups{grid-template-columns:1fr}
+  }
+  @page{size:A4 landscape;margin:12mm}
+  @media print{
+    header,.bar,.subtabs,.noprint,.addrow,.chip select,#demoNotice,.rgpd,dialog{display:none!important}
+    body{background:#fff;font-size:10.5pt}
+    main{padding:0}
+    .card,.grp,.kpi{border:1px solid #ccc;break-inside:avoid}
+    .groups{grid-template-columns:1fr 1fr}
+    .print-only{display:block}
+    .grp .fields input{border:0;padding:0}
+    .heat th.vert{height:120px}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <a href="./">← Espace direction</a>
+      <h1>Évaluations nationales</h1>
+      <span id="saveState"></span>
+      <div id="userBox"></div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-v="import" class="on">Importer</button>
+      <button data-v="ecole">Vue d'ensemble</button>
+      <button data-v="classes">Par classe</button>
+      <button data-v="eleves">Élèves</button>
+      <button data-v="groupes">Groupes d'aide</button>
+      <button data-v="reglages">Réglages</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="demoNotice" class="notice hidden">
+    Mode hors ligne : Firebase n'a pas pu être chargé. Les données restent seulement dans ce navigateur tant que la connexion n'est pas rétablie.
+  </div>
+
+  <section id="login" class="hidden">
+    <p>Connectez-vous avec votre compte Google pour accéder aux résultats des évaluations.</p>
+    <button class="primary" id="btnLogin">Se connecter avec Google</button>
+    <p id="loginErr" style="color:var(--danger);font-size:13px"></p>
+  </section>
+
+  <!-- ============ IMPORT ============ -->
+  <section id="v-import" class="view hidden">
+    <h2>Importer les fichiers de restitution</h2>
+    <p class="lead">Déposez les fichiers Excel téléchargés sur le portail des évaluations (<em>0831157G_CPA_RestitutionCPF.xlsx</em>, etc.) : un fichier par classe et par discipline. Vous pouvez tous les déposer d'un coup. Un fichier déjà importé est simplement mis à jour.</p>
+    <div class="rgpd">Les fichiers sont lus dans votre navigateur ; seuls les résultats par compétence sont enregistrés, dans la même base protégée que vos autres carnets. Ils ne sont jamais déposés sur GitHub.</div>
+    <div id="drop" tabindex="0">
+      <strong>Déposer les fichiers ici</strong>
+      <span>ou cliquer pour les choisir (plusieurs fichiers possibles)</span>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" multiple hidden>
+    </div>
+    <div class="log" id="importLog"></div>
+    <h3>Fichiers reçus</h3>
+    <div class="card tscroll" id="coverage"></div>
+  </section>
+
+  <!-- ============ ÉCOLE ============ -->
+  <section id="v-ecole" class="view hidden">
+    <div class="print-only"><strong>École élémentaire Jean Aicard — Évaluations nationales <span class="annee"></span></strong></div>
+    <div class="bar">
+      <h2 class="grow" style="margin:0">Vue d'ensemble de l'école</h2>
+      <button class="small noprint" onclick="window.print()">Imprimer</button>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <div class="legend">
+      <span><i style="background:var(--b-mid)"></i>Groupe à besoins</span>
+      <span><i style="background:var(--f-mid)"></i>Groupe fragile</span>
+      <span><i style="background:var(--s-mid)"></i>Groupe satisfaisant</span>
+      <span><i style="background:var(--a-soft)"></i>Absent / non positionné</span>
+      <span style="margin-left:auto">Le pourcentage à droite = part d'élèves « à besoins ».</span>
+    </div>
+    <div id="ecoleNiveaux"></div>
+  </section>
+
+  <!-- ============ CLASSES ============ -->
+  <section id="v-classes" class="view hidden">
+    <div class="bar">
+      <select id="cClasse"></select>
+      <select id="cMat"><option value="F">Français</option><option value="M">Mathématiques</option></select>
+      <span class="grow"></span>
+      <button class="small" onclick="window.print()">Imprimer</button>
+    </div>
+    <div class="print-only"><strong>École élémentaire Jean Aicard — Évaluations nationales <span class="annee"></span></strong></div>
+    <div id="classeView"></div>
+  </section>
+
+  <!-- ============ ÉLÈVES ============ -->
+  <section id="v-eleves" class="view hidden">
+    <div class="bar">
+      <input id="eSearch" type="search" placeholder="Rechercher un élève…" class="grow">
+      <select id="eNiveau"><option value="">Tous niveaux</option></select>
+      <select id="eClasse"><option value="">Toutes classes</option></select>
+      <select id="eBesoin">
+        <option value="">Tous besoins</option>
+        <option value="3">N3 — grande difficulté</option>
+        <option value="2">N2 — besoins</option>
+        <option value="1">N1 — fragilités</option>
+        <option value="0">Sans besoin repéré</option>
+      </select>
+    </div>
+    <div class="card tscroll" id="elevesTable"></div>
+  </section>
+
+  <!-- ============ GROUPES ============ -->
+  <section id="v-groupes" class="view hidden">
+    <div class="subtabs" id="gTabs">
+      <button data-g="apc" class="on">APC</button>
+      <button data-g="s1d">Soutien 1D (S1D)</button>
+      <button data-g="sran">Stages SRAN</button>
+    </div>
+    <div id="gBody"></div>
+  </section>
+
+  <!-- ============ RÉGLAGES ============ -->
+  <section id="v-reglages" class="view hidden">
+    <h2>Réglages</h2>
+    <p class="lead">Ces réglages servent à repérer les élèves et à former les groupes. Les nombres se mettent à jour dès que vous changez une valeur.</p>
+    <div class="sets" id="sets"></div>
+  </section>
+</main>
+
+<dialog id="dlg"><div class="dlg" id="dlgBody"></div></dialog>
+<datalist id="elevesList"></datalist>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="module">
+/* =====================================================================
+   1) CONFIGURATION
+   ===================================================================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyDovrxndeWXBs-ZA_-QQYw6983D5bQ6kgo",
+  authDomain: "sorties-scolaires.firebaseapp.com",
+  projectId: "sorties-scolaires",
+  storageBucket: "sorties-scolaires.firebasestorage.app",
+  messagingSenderId: "690408502155",
+  appId: "1:690408502155:web:d0d5cfc618e64d5028f58e"
+};
+const COLLECTION = "evaluations";
+const ANNEE = (() => { const d = new Date(), y = d.getFullYear(); return d.getMonth() >= 7 ? `${y}-${y+1}` : `${y-1}-${y}`; })();
+
+const NIVEAUX = ["CP","CE1","CE2","CM1","CM2"];
+const MATS = { F:"Français", M:"Mathématiques" };
+const ORDRE_CLASSES = ["CPA","CPB","CPC","CE1A","CE1B","CE1/CE2","CE2A","CE2B","CM1A","CM1B","CM1/CM2","CM2A","CM2B"];
+const NV_LIB = { 3:"N3", 2:"N2", 1:"N1", 0:"—" };
+const NV_TXT = { 3:"N3 — grande difficulté", 2:"N2 — besoins", 1:"N1 — fragilités", 0:"Sans besoin repéré" };
+
+const REGLAGES_DEFAUT = {
+  seuils: { n3: 50, n2: 25, n1: 10 },
+  apc:  { niveauMin: 3, min: 6, max: 8, completer: true },
+  s1d:  { niveaux: ["CP","CE1"], publics: [2], min: 6, max: 11, heures: 24, mercredis: 4, duree: 1.5 },
+  sran: { publics: [2,3], min: 6, max: 11, sessions: [
+            { nom: "Vacances d'automne — semaine 1", niveaux: ["CE1","CE2"], enseignants: 2 },
+            { nom: "Vacances d'automne — semaine 2", niveaux: ["CM1","CM2"], enseignants: 1 } ] },
+  enseignants: {
+    "CPA":"Mme LATRACH", "CPB":"Mme SEYFRIED", "CPC":"Mme OSTROWSKI",
+    "CE1A":"Mme MONJARDIN", "CE1B":"Mme BASOLO", "CE1/CE2":"Mme COMBA",
+    "CE2A":"Mme GRATTAROLA", "CE2B":"Mme MAROLLEAU",
+    "CM1A":"Mme GONZALEZ", "CM1B":"Mme JOURDAIN", "CM1/CM2":"Mme ODASSO",
+    "CM2A":"Mme BORGETTO", "CM2B":"Mme BLAISON"
+  },
+  dispenses: ["CM1B"]
+};
+
+/* =====================================================================
+   2) STOCKAGE — Firestore (document unique par année), repli local
+   ===================================================================== */
+let mode = "firebase", auth = null, fb = {}, db = null;
+try {
+  const app = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+  const au  = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+  const fs  = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+  const a = app.initializeApp(firebaseConfig);
+  auth = au.getAuth(a); db = fs.getFirestore(a); fb = { au, fs };
+} catch (e) { mode = "local"; console.warn("Firebase indisponible, mode local", e); }
+
+const LKEY = "evaluations-" + ANNEE;
+const store = {
+  async load(){
+    if (mode === "firebase") {
+      const snap = await fb.fs.getDoc(fb.fs.doc(db, COLLECTION, ANNEE));
+      return snap.exists() && snap.data().payload ? JSON.parse(snap.data().payload) : null;
+    }
+    try { return JSON.parse(localStorage.getItem(LKEY)); } catch { return null; }
+  },
+  async save(data){
+    const payload = JSON.stringify(data);
+    if (mode === "firebase") {
+      await fb.fs.setDoc(fb.fs.doc(db, COLLECTION, ANNEE), {
+        payload, updatedAt: new Date().toISOString(), updatedBy: auth.currentUser?.email || ""
+      });
+    } else { try { localStorage.setItem(LKEY, payload); } catch {} }
+  }
+};
+
+/* =====================================================================
+   3) ÉTAT ET OUTILS
+   ===================================================================== */
+let DATA = vide();
+function vide(){ return { annee: ANNEE, fichiers: {}, competences: {}, eleves: [], groupes: { apc: [], s1d: [], sran: [] }, accords: {}, reglages: structuredClone(REGLAGES_DEFAUT) }; }
+const R = () => DATA.reglages;
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm = (t) => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+const uid = () => Math.random().toString(36).slice(2, 10);
+const pct = (n, d) => d ? Math.round(100 * n / d) : 0;
+const ordreClasse = (c) => { const i = ORDRE_CLASSES.indexOf(c); return i < 0 ? 99 : i; };
+const nomComplet = (e) => `${e.nom} ${e.prenom}`.trim();
+const byId = (id) => DATA.eleves.find(e => e.id === id);
+const nvBadge = (n) => n == null ? `<span class="nv nvx">abs.</span>` : `<span class="nv nv${n}">${NV_LIB[n]}</span>`;
+
+/* ---------- Sauvegarde automatique ---------- */
+let saveTimer = null;
+function changed(){
+  $("#saveState").textContent = "Enregistrement…";
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try { await store.save(DATA); $("#saveState").textContent = mode === "firebase" ? "Enregistré ✓" : "Enregistré sur cet appareil"; }
+    catch (e) { $("#saveState").textContent = "⚠ Non enregistré"; alert("Enregistrement impossible : " + (e.code || e.message) + "\nVérifiez les règles Firestore de la collection « evaluations »."); }
+  }, 700);
+}
+
+/* ---------- Profil de besoin d'un élève ----------
+   Indice = (2 × compétences « à besoins » + 1 × « fragiles ») / (2 × compétences positionnées)
+   N3 / N2 / N1 selon les seuils réglables.                                  */
+function profil(e, m){
+  const r = e.res?.[m]; if (!r) return null;
+  let b = 0, f = 0, s = 0, a = 0;
+  r.forEach(x => { if (x.g === "B") b++; else if (x.g === "F") f++; else if (x.g === "S") s++; else a++; });
+  const n = b + f + s;
+  const ind = n ? Math.round(100 * (2*b + f) / (2*n)) : null;
+  const S = R().seuils;
+  const niv = ind == null ? null : ind >= S.n3 ? 3 : ind >= S.n2 ? 2 : ind >= S.n1 ? 1 : 0;
+  return { b, f, s, a, n, ind, niv };
+}
+function besoin(e){ const p = [profil(e,"F"), profil(e,"M")].filter(x => x && x.niv != null); return p.length ? Math.max(...p.map(x => x.niv)) : null; }
+function indiceMax(e){ return Math.max(profil(e,"F")?.ind ?? -1, profil(e,"M")?.ind ?? -1); }
+function dominante(e){ const f = profil(e,"F")?.ind ?? -1, m = profil(e,"M")?.ind ?? -1; return m > f ? "M" : "F"; }
+function classes(){ return [...new Set(DATA.eleves.map(e => e.classe))].sort((a,b) => ordreClasse(a) - ordreClasse(b) || a.localeCompare(b)); }
+function niveauxPresents(){ return NIVEAUX.filter(n => DATA.eleves.some(e => e.niveau === n)); }
+function dispositifs(id){
+  const out = [];
+  ["apc","s1d","sran"].forEach(d => DATA.groupes[d].forEach(g => { if (g.eleves.includes(id)) out.push({ d, g }); }));
+  return out;
+}
+const DLIB = { apc:"APC", s1d:"S1D", sran:"SRAN" };
+
+/* =====================================================================
+   4) IMPORT DES FICHIERS DE RESTITUTION
+   ===================================================================== */
+const GROUPE_CODE = (v) => {
+  const t = String(v || "").toLowerCase();
+  if (t.includes("besoin")) return "B";
+  if (t.includes("fragile")) return "F";
+  if (t.includes("satisfaisant")) return "S";
+  return "A";
+};
+function decouperNom(full){
+  const mots = String(full || "").trim().split(/\s+/).filter(Boolean);
+  const estMaj = (m) => /[A-ZÀ-Ý]/.test(m) && m === m.toUpperCase();
+  const nom = mots.filter(estMaj), prenom = mots.filter(m => !estMaj(m));
+  if (!nom.length) return { nom: mots.join(" "), prenom: "" };
+  return { nom: nom.join(" "), prenom: prenom.join(" ") };
+}
+function lireFichier(nomFichier, wb){
+  // Niveau et discipline : d'après le nom du fichier, sinon d'après les onglets
+  let niveau = null, mat = null;
+  const m = nomFichier.match(/Restitution(CP|CE1|CE2|CM1|CM2)([FM])/i);
+  if (m) { niveau = m[1].toUpperCase(); mat = m[2].toUpperCase(); }
+  const nGroupes = wb.SheetNames.find(n => /^Groupes_/i.test(n));
+  if (!nGroupes) throw new Error("onglet « Groupes_… » introuvable — est-ce bien un fichier de restitution ?");
+  if (!mat) mat = /MATH/i.test(nGroupes) ? "M" : "F";
+  if (!niveau) { const k = wb.SheetNames.map(n => n.match(/^(CP|CE1|CE2|CM1|CM2)/)).find(Boolean); if (k) niveau = k[1]; }
+  if (!niveau) throw new Error("niveau introuvable");
+  const nScores = wb.SheetNames.find(n => mat === "F" ? /^Scores_FRAN/i.test(n) : /^Scores_MATH/i.test(n));
+  const G = XLSX.utils.sheet_to_json(wb.Sheets[nGroupes], { header: 1, defval: null, raw: false });
+  const S = nScores ? XLSX.utils.sheet_to_json(wb.Sheets[nScores], { header: 1, defval: null, raw: false }) : [];
+
+  const comps = (G[0] || []).slice(2).map(c => c ? String(c).replace(/​/g, "").trim() : null);
+  const nb = comps.findLastIndex(c => c) + 1;
+  const refs = (G[1] || []).slice(2, 2 + nb);
+  const seuil = (lab) => (G.find(r => String(r?.[1] || "").includes(lab)) || []).slice(2, 2 + nb);
+  const s1 = seuil("Seuil 1"), s2 = seuil("Seuil 2");
+  const competences = comps.slice(0, nb).map((nom, i) => ({ nom, ref: refs[i] || "", s1: s1[i] ?? null, s2: s2[i] ?? null }));
+
+  const hdr = G.findIndex(r => String(r?.[0] || "").trim() === "Classe");
+  const gRows = G.slice(hdr + 1).filter(r => r && r[1]);
+  const sRows = S.slice(2).filter(r => r && r[0] && r[1]);
+
+  const eleves = gRows.map((r, i) => {
+    const prenomG = String(r[1]).trim();
+    // Ligne de scores correspondante : même rang, sinon même prénom dans la classe
+    let sr = sRows[i];
+    if (!sr || !norm(sr[1]).endsWith(norm(prenomG))) sr = sRows.find(x => x[0] === r[0] && norm(x[1]).endsWith(norm(prenomG))) || null;
+    const { nom, prenom } = sr ? decouperNom(sr[1]) : { nom: "", prenom: prenomG };
+    const res = competences.map((c, j) => {
+      const g = GROUPE_CODE(r[2 + j]);
+      const sc = sr ? String(sr[2 + j] ?? "") : "";
+      const mm = sc.match(/(\d+)\s*\/\s*(\d+)/);
+      return mm ? { g, s: +mm[1], m: +mm[2] } : { g };
+    });
+    return { classe: String(r[0]).trim(), niveau, nom, prenom: prenom || prenomG, res };
+  });
+  return { niveau, mat, competences, eleves };
+}
+function integrer(nomFichier, lu){
+  DATA.competences[`${lu.niveau}|${lu.mat}`] = lu.competences;
+  let n = 0;
+  lu.eleves.forEach(x => {
+    const key = norm(x.classe + x.niveau + x.nom + x.prenom);
+    let e = DATA.eleves.find(y => y.key === key);
+    if (!e) { e = { id: uid(), key, classe: x.classe, niveau: x.niveau, nom: x.nom, prenom: x.prenom, res: {} }; DATA.eleves.push(e); }
+    e.res[lu.mat] = x.res; n++;
+  });
+  const classesFichier = [...new Set(lu.eleves.map(e => e.classe))];
+  classesFichier.forEach(c => { DATA.fichiers[`${c}|${lu.niveau}|${lu.mat}`] = { nom: nomFichier, n: lu.eleves.filter(e => e.classe === c).length, date: new Date().toISOString() }; });
+  return n;
+}
+async function importer(files){
+  const log = $("#importLog");
+  if (typeof XLSX === "undefined") { log.innerHTML = `<div class="ko">La bibliothèque de lecture Excel n'a pas pu être chargée (connexion ?).</div>`; return; }
+  let ok = 0;
+  for (const f of files) {
+    try {
+      const wb = XLSX.read(await f.arrayBuffer(), { type: "array" });
+      const lu = lireFichier(f.name, wb);
+      const n = integrer(f.name, lu);
+      log.insertAdjacentHTML("afterbegin", `<div class="ok">✓ ${esc(f.name)} — ${lu.niveau} ${MATS[lu.mat]}, ${n} élèves</div>`);
+      ok++;
+    } catch (e) {
+      log.insertAdjacentHTML("afterbegin", `<div class="ko">✕ ${esc(f.name)} — ${esc(e.message)}</div>`);
+    }
+  }
+  if (ok) {
+    DATA.eleves.sort((a,b) => ordreClasse(a.classe) - ordreClasse(b.classe) || a.niveau.localeCompare(b.niveau) || a.nom.localeCompare(b.nom, "fr") || a.prenom.localeCompare(b.prenom, "fr"));
+    if (!DATA.groupes.apc.length && !DATA.groupes.s1d.length && !DATA.groupes.sran.length) genererTout();
+    changed(); toutRafraichir();
+  }
+}
+const drop = $("#drop"), fi = $("#fileInput");
+drop.onclick = () => fi.click();
+drop.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") fi.click(); };
+fi.onchange = () => { importer([...fi.files]); fi.value = ""; };
+["dragenter","dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => importer([...e.dataTransfer.files].filter(f => /\.xlsx?$/i.test(f.name))));
+
+function renderCoverage(){
+  const cl = classes();
+  if (!cl.length) { $("#coverage").innerHTML = `<div class="empty">Aucun fichier importé pour ${ANNEE}.</div>`; return; }
+  const rows = [];
+  cl.forEach(c => {
+    const nivs = [...new Set(DATA.eleves.filter(e => e.classe === c).map(e => e.niveau))];
+    nivs.forEach(nv => {
+      const cell = (m) => { const x = DATA.fichiers[`${c}|${nv}|${m}`]; return x ? `<span class="chk">✓</span> ${x.n} élèves` : `<span class="miss">manquant</span>`; };
+      rows.push(`<tr><td><b>${esc(c)}</b></td><td>${nv}</td><td>${cell("F")}</td><td>${cell("M")}</td></tr>`);
+    });
+  });
+  $("#coverage").innerHTML = `<table><thead><tr><th>Classe</th><th>Niveau</th><th>Français</th><th>Mathématiques</th></tr></thead><tbody>${rows.join("")}</tbody></table>
+    <p style="font-size:13px;color:var(--muted);margin:10px 0 0">${DATA.eleves.length} élèves au total. Les élèves de la classe ULIS évalués avec leur classe d'inclusion apparaissent dans celle-ci.</p>`;
+}
+
+/* =====================================================================
+   5) VUE D'ENSEMBLE DE L'ÉCOLE
+   ===================================================================== */
+function statsCompetences(eleves, niveau, mat){
+  const comps = DATA.competences[`${niveau}|${mat}`] || [];
+  return comps.map((c, j) => {
+    const t = { B:0, F:0, S:0, A:0 };
+    eleves.forEach(e => { const g = e.res?.[mat]?.[j]?.g; if (g) t[g]++; });
+    const n = t.B + t.F + t.S + t.A;
+    return { nom: c.nom, ref: c.ref, ...t, n };
+  });
+}
+function stackHTML(t){
+  const n = t.n || 1;
+  return `<div class="stack" title="À besoins ${t.B} · Fragile ${t.F} · Satisfaisant ${t.S}${t.A ? " · Absents " + t.A : ""}">
+    <i class="sb" style="width:${100*t.B/n}%"></i><i class="sf" style="width:${100*t.F/n}%"></i><i class="ss" style="width:${100*t.S/n}%"></i></div>`;
+}
+function renderEcole(){
+  const E = DATA.eleves;
+  if (!E.length) { $("#kpis").innerHTML = ""; $("#ecoleNiveaux").innerHTML = `<div class="empty">Importez d'abord les fichiers de restitution.</div>`; return; }
+  const cpt = { 3:0, 2:0, 1:0, 0:0 };
+  E.forEach(e => { const b = besoin(e); if (b != null) cpt[b]++; });
+  $("#kpis").innerHTML = `
+    <div class="kpi"><b>${E.length}</b><span>élèves évalués</span></div>
+    <div class="kpi k3"><b>${cpt[3]}</b><span>N3 — grande difficulté (${pct(cpt[3],E.length)} %)</span></div>
+    <div class="kpi k2"><b>${cpt[2]}</b><span>N2 — besoins (${pct(cpt[2],E.length)} %)</span></div>
+    <div class="kpi k1"><b>${cpt[1]}</b><span>N1 — fragilités (${pct(cpt[1],E.length)} %)</span></div>
+    <div class="kpi"><b>${cpt[0]}</b><span>sans besoin repéré</span></div>`;
+
+  $("#ecoleNiveaux").innerHTML = niveauxPresents().map(nv => {
+    const el = E.filter(e => e.niveau === nv);
+    const cls = [...new Set(el.map(e => e.classe))].sort((a,b) => ordreClasse(a) - ordreClasse(b));
+    const blocs = ["F","M"].map(m => {
+      const st = statsCompetences(el, nv, m);
+      if (!st.length) return `<div class="card"><h3 style="margin-top:0">${MATS[m]}</h3><div class="empty">Fichier non importé.</div></div>`;
+      const tri = [...st].sort((a,b) => (b.B/b.n) - (a.B/a.n));
+      const prof = el.map(e => profil(e, m)).filter(p => p && p.niv != null);
+      const n3 = prof.filter(p => p.niv === 3).length, n2 = prof.filter(p => p.niv === 2).length;
+      // Comparaison des classes : % satisfaisant par compétence
+      const heat = cls.length > 1 ? `
+        <div class="tscroll" style="margin-top:12px"><table class="heat"><thead><tr><th class="name">% satisfaisant</th>${st.map(c => `<th class="vert" title="${esc(c.nom)}">${esc(c.nom)}</th>`).join("")}</tr></thead>
+        <tbody>${cls.map(c => {
+          const sc = statsCompetences(el.filter(e => e.classe === c), nv, m);
+          return `<tr><td class="name"><b>${esc(c)}</b></td>${sc.map(x => { const p = pct(x.S, x.n); return `<td class="${p < 50 ? "cB" : p < 70 ? "cF" : "cS"}">${x.n ? p : "–"}</td>`; }).join("")}</tr>`;
+        }).join("")}</tbody></table></div>` : "";
+      return `<div class="card">
+        <h3 style="margin-top:0">${MATS[m]} <span style="font-weight:400;color:var(--muted);font-size:13px">— ${n3} N3, ${n2} N2 sur ${prof.length}</span></h3>
+        ${tri.map(c => `<div class="cbar"><div class="lab" title="${esc(c.nom)}">${esc(c.nom)}</div>${stackHTML(c)}<div class="pct">${pct(c.B, c.n)} %</div></div>`).join("")}
+        ${heat}
+      </div>`;
+    }).join("");
+    return `<h3>${nv} <span style="font-weight:400;color:var(--muted)">— ${el.length} élèves · ${cls.join(", ")}</span></h3><div class="lvgrid">${blocs}</div>`;
+  }).join("");
+}
+
+/* =====================================================================
+   6) PAR CLASSE
+   ===================================================================== */
+function renderClasses(){
+  const cl = classes();
+  const sel = $("#cClasse"), prev = sel.value;
+  sel.innerHTML = cl.map(c => `<option>${esc(c)}</option>`).join("");
+  if (cl.includes(prev)) sel.value = prev;
+  const c = sel.value, m = $("#cMat").value;
+  if (!c) { $("#classeView").innerHTML = `<div class="empty">Importez d'abord les fichiers de restitution.</div>`; return; }
+  const el = DATA.eleves.filter(e => e.classe === c);
+  const nivs = [...new Set(el.map(e => e.niveau))];
+  $("#classeView").innerHTML = nivs.map(nv => {
+    const comps = DATA.competences[`${nv}|${m}`] || [];
+    const list = el.filter(e => e.niveau === nv && e.res[m])
+      .map(e => ({ e, p: profil(e, m) }))
+      .sort((a,b) => (b.p.ind ?? -1) - (a.p.ind ?? -1) || a.e.nom.localeCompare(b.e.nom, "fr"));
+    if (!list.length) return `<div class="card"><div class="empty">Pas de résultats en ${MATS[m].toLowerCase()} pour les ${nv} de ${esc(c)}.</div></div>`;
+    const st = statsCompetences(list.map(x => x.e), nv, m);
+    return `<div class="card">
+      <h2>${esc(c)}${nivs.length > 1 ? " — élèves de " + nv : ""} · ${MATS[m]}</h2>
+      <p style="margin:0 0 10px;color:var(--muted);font-size:13px">Enseignant(e) : ${esc(R().enseignants[c] || "—")} · Élèves classés du plus au moins en difficulté. Cliquez sur un nom pour ouvrir sa fiche.</p>
+      <div class="tscroll"><table class="heat">
+        <thead><tr><th class="name">Élève</th><th>Besoin</th><th>Indice</th>${comps.map(x => `<th class="vert" title="${esc(x.nom)} — ${esc(x.ref)}">${esc(x.nom)}</th>`).join("")}</tr></thead>
+        <tbody>
+          ${list.map(({e, p}) => `<tr class="clk" data-id="${e.id}"><td class="name">${esc(nomComplet(e))}</td><td>${nvBadge(p.niv)}</td><td>${p.ind ?? "–"}</td>
+            ${e.res[m].map(r => `<td class="c${r.g}">${r.s != null ? r.s + "/" + r.m : r.g === "A" ? "abs" : ""}</td>`).join("")}</tr>`).join("")}
+          <tr><td class="name" style="color:var(--muted)">% à besoins</td><td></td><td></td>${st.map(x => `<td style="font-weight:700;color:var(--b)">${pct(x.B, x.n)}</td>`).join("")}</tr>
+          <tr><td class="name" style="color:var(--muted)">% fragiles</td><td></td><td></td>${st.map(x => `<td style="font-weight:700;color:var(--f)">${pct(x.F, x.n)}</td>`).join("")}</tr>
+        </tbody></table></div>
+    </div>`;
+  }).join("");
+  $$("#classeView tr.clk").forEach(tr => tr.onclick = () => ouvrirFiche(tr.dataset.id));
+}
+$("#cClasse").onchange = renderClasses; $("#cMat").onchange = renderClasses;
+
+/* =====================================================================
+   7) ÉLÈVES + FICHE
+   ===================================================================== */
+function renderEleves(){
+  const sn = $("#eNiveau"), sc = $("#eClasse");
+  const pn = sn.value, pc = sc.value;
+  sn.innerHTML = `<option value="">Tous niveaux</option>` + niveauxPresents().map(n => `<option>${n}</option>`).join("");
+  sc.innerHTML = `<option value="">Toutes classes</option>` + classes().map(c => `<option>${esc(c)}</option>`).join("");
+  sn.value = pn; sc.value = pc;
+  const q = norm($("#eSearch").value), fb_ = $("#eBesoin").value;
+  const rows = DATA.eleves.filter(e => {
+    if (pn && e.niveau !== pn) return false;
+    if (pc && e.classe !== pc) return false;
+    if (fb_ !== "" && besoin(e) !== +fb_) return false;
+    if (q && !norm(nomComplet(e)).includes(q)) return false;
+    return true;
+  }).sort((a,b) => indiceMax(b) - indiceMax(a));
+  if (!DATA.eleves.length) { $("#elevesTable").innerHTML = `<div class="empty">Importez d'abord les fichiers de restitution.</div>`; return; }
+  $("#elevesTable").innerHTML = `<p style="margin:0 0 8px;font-size:13px;color:var(--muted)">${rows.length} élève(s)</p>
+    <table><thead><tr><th>Élève</th><th>Classe</th><th>Français</th><th>Maths</th><th>Besoin</th><th>Dispositifs</th></tr></thead><tbody>
+    ${rows.map(e => { const pf = profil(e,"F"), pm = profil(e,"M");
+      return `<tr class="clk" data-id="${e.id}" style="cursor:pointer"><td><b>${esc(e.nom)}</b> ${esc(e.prenom)}</td><td>${esc(e.classe)}${e.classe.includes("/") ? " <span style='color:var(--muted)'>(" + e.niveau + ")</span>" : ""}</td>
+      <td>${pf ? nvBadge(pf.niv) + ` <small style="color:var(--muted)">${pf.ind ?? ""}</small>` : "–"}</td>
+      <td>${pm ? nvBadge(pm.niv) + ` <small style="color:var(--muted)">${pm.ind ?? ""}</small>` : "–"}</td>
+      <td>${nvBadge(besoin(e))}</td>
+      <td>${dispositifs(e.id).map(x => `<span class="tag">${DLIB[x.d]}</span>`).join("")}${DATA.accords[e.id] ? `<span class="tag" style="background:#f3f4f6;color:var(--muted)">SRAN : ${DATA.accords[e.id]}</span>` : ""}</td></tr>`; }).join("")}
+    </tbody></table>`;
+  $$("#elevesTable tr.clk").forEach(tr => tr.onclick = () => ouvrirFiche(tr.dataset.id));
+}
+["#eSearch","#eNiveau","#eClasse","#eBesoin"].forEach(s => $(s).addEventListener("input", renderEleves));
+
+function ouvrirFiche(id){
+  const e = byId(id); if (!e) return;
+  const bloc = (m) => {
+    const comps = DATA.competences[`${e.niveau}|${m}`] || [], r = e.res[m], p = profil(e, m);
+    if (!r) return `<h3>${MATS[m]}</h3><p style="color:var(--muted)">Pas de résultats.</p>`;
+    return `<h3>${MATS[m]} — ${nvBadge(p.niv)} <small style="color:var(--muted);font-weight:400">indice ${p.ind ?? "–"} · ${p.b} à besoins, ${p.f} fragile(s)</small></h3>
+      ${comps.map((c, j) => { const x = r[j] || {}; const w = x.m ? 100 * x.s / x.m : 0;
+        const col = x.g === "B" ? "var(--b-mid)" : x.g === "F" ? "var(--f-mid)" : x.g === "S" ? "var(--s-mid)" : "transparent";
+        return `<div class="cbar"><div class="lab" title="${esc(c.nom)}">${esc(c.nom)}</div>
+          <div class="stack"><i style="width:${w}%;background:${col}"></i></div>
+          <div class="sc">${x.s != null ? x.s + "/" + x.m : "abs."}</div></div>`; }).join("")}`;
+  };
+  const d = dispositifs(id);
+  $("#dlgBody").innerHTML = `<button class="small close" id="dlgClose">Fermer</button>
+    <h2>${esc(nomComplet(e))}</h2>
+    <div style="color:var(--muted);font-size:14px">${esc(e.classe)} · ${e.niveau} · besoin global ${nvBadge(besoin(e))}</div>
+    <div class="fiche">${bloc("F")}${bloc("M")}</div>
+    <h3>Dispositifs</h3>
+    <p style="margin:0">${d.length ? d.map(x => `<span class="tag">${DLIB[x.d]} · ${esc(x.g.titre)}</span>`).join(" ") : "<span style='color:var(--muted)'>Aucun dispositif pour l'instant.</span>"}</p>`;
+  $("#dlgClose").onclick = () => $("#dlg").close();
+  $("#dlg").showModal();
+}
+$("#dlg").addEventListener("click", (ev) => { if (ev.target.id === "dlg") $("#dlg").close(); });
+
+/* =====================================================================
+   8) FORMATION DES GROUPES
+   ===================================================================== */
+function decouper(liste, k){
+  const out = Array.from({ length: k }, () => []);
+  const base = Math.floor(liste.length / k), reste = liste.length % k;
+  let i = 0;
+  for (let g = 0; g < k; g++) { const t = base + (g < reste ? 1 : 0); out[g] = liste.slice(i, i + t); i += t; }
+  return out;
+}
+function competencesCibles(ids, mats){
+  const score = {};
+  ids.map(byId).filter(Boolean).forEach(e => mats.forEach(m => {
+    const comps = DATA.competences[`${e.niveau}|${m}`] || [];
+    (e.res[m] || []).forEach((r, j) => {
+      const w = r.g === "B" ? 2 : r.g === "F" ? 1 : 0;
+      if (w && comps[j]) score[comps[j].nom] = (score[comps[j].nom] || 0) + w;
+    });
+  }));
+  return Object.entries(score).sort((a,b) => b[1] - a[1]).slice(0, 3).map(x => x[0]);
+}
+function majoritaire(ids){
+  let f = 0, m = 0; ids.map(byId).filter(Boolean).forEach(e => dominante(e) === "M" ? m++ : f++);
+  return m > f ? "M" : "F";
+}
+function intervenantDe(c){ return R().dispenses.includes(c) ? "À désigner (enseignante dispensée)" : (R().enseignants[c] || ""); }
+
+function genAPC(){
+  const S = R().apc, out = [];
+  classes().forEach(c => {
+    const el = DATA.eleves.filter(e => e.classe === c);
+    ["F","M"].forEach((m, i) => {
+      const ranked = el.map(e => ({ e, p: profil(e, m) })).filter(x => x.p && x.p.ind != null).sort((a,b) => b.p.ind - a.p.ind);
+      let pick = ranked.filter(x => x.p.niv >= S.niveauMin);
+      if (!pick.length) return;
+      if (S.completer && pick.length < S.min) pick = ranked.filter(x => x.p.niv >= 1).slice(0, Math.max(S.min, pick.length));
+      const ids = pick.map(x => x.e.id);
+      out.push({ id: uid(), disp: "apc", classe: c, matiere: m, titre: `${c} — ${MATS[m]}`,
+        jour: i === 0 ? "Jour 1" : "Jour 2", horaire: "", seances: "", note: "",
+        intervenant: intervenantDe(c), eleves: ids.slice(0, S.max), attente: ids.slice(S.max) });
+    });
+  });
+  return out;
+}
+function genS1D(){
+  const S = R().s1d, out = [];
+  S.niveaux.forEach(nv => {
+    const cand = DATA.eleves.filter(e => e.niveau === nv && S.publics.includes(besoin(e)))
+      .sort((a,b) => dominante(a).localeCompare(dominante(b)) || indiceMax(b) - indiceMax(a));
+    if (!cand.length) return;
+    const k = Math.max(1, Math.ceil(cand.length / S.max));
+    decouper(cand, k).forEach((g, j) => {
+      const ids = g.map(e => e.id), m = majoritaire(ids);
+      out.push({ id: uid(), disp: "s1d", niveaux: [nv], matiere: m, titre: `S1D ${nv} — groupe ${j + 1}`,
+        jour: "Mercredis de janvier", horaire: "", seances: S.mercredis, note: "", intervenant: "", eleves: ids, attente: [] });
+    });
+  });
+  return out;
+}
+function candidatsSRAN(session){
+  const S = R().sran;
+  return DATA.eleves.filter(e => session.niveaux.includes(e.niveau) && S.publics.includes(besoin(e)))
+    .sort((a,b) => NIVEAUX.indexOf(a.niveau) - NIVEAUX.indexOf(b.niveau) || indiceMax(b) - indiceMax(a));
+}
+function genSRAN(){
+  const S = R().sran, out = [];
+  S.sessions.forEach((ss, si) => {
+    const ok = candidatsSRAN(ss).filter(e => DATA.accords[e.id] === "oui");
+    if (!ok.length) return;
+    const k = Math.max(1, +ss.enseignants || 1), cap = k * S.max;
+    const prio = [...ok].sort((a,b) => indiceMax(b) - indiceMax(a));
+    const retenus = new Set(prio.slice(0, cap).map(e => e.id));
+    const liste = ok.filter(e => retenus.has(e.id));
+    const attente = prio.slice(cap).map(e => e.id);
+    decouper(liste, Math.min(k, liste.length)).forEach((g, j) => {
+      const ids = g.map(e => e.id), nivs = [...new Set(g.map(e => e.niveau))];
+      out.push({ id: uid(), disp: "sran", session: si, niveaux: nivs, matiere: majoritaire(ids),
+        titre: `SRAN ${nivs.join("-")}${k > 1 ? " — groupe " + (j + 1) : ""}`, jour: ss.nom, horaire: "", seances: "", note: "",
+        intervenant: "", eleves: ids, attente: j === 0 ? attente : [] });
+    });
+  });
+  return out;
+}
+function genererTout(){ DATA.groupes.apc = genAPC(); DATA.groupes.s1d = genS1D(); DATA.groupes.sran = genSRAN(); }
+
+/* =====================================================================
+   9) AFFICHAGE ET ÉDITION DES GROUPES
+   ===================================================================== */
+let gCur = "apc";
+$$("#gTabs button").forEach(b => b.onclick = () => { gCur = b.dataset.g; $$("#gTabs button").forEach(x => x.classList.toggle("on", x === b)); renderGroupes(); });
+
+function elevesDatalist(){
+  $("#elevesList").innerHTML = DATA.eleves.map(e => `<option value="${esc(nomComplet(e) + " — " + e.classe)}"></option>`).join("");
+}
+function chipHTML(g, id, autres){
+  const e = byId(id); if (!e) return "";
+  const pm = g.disp === "apc" ? profil(e, g.matiere) : null;
+  const nv = pm ? pm.niv : besoin(e);
+  const autresD = dispositifs(id).filter(x => x.g.id !== g.id).map(x => DLIB[x.d]);
+  return `<div class="chip"><span>${esc(e.nom)} ${esc(e.prenom)} ${g.disp !== "apc" ? `<span class="cl">${esc(e.classe)}</span>` : ""}
+      ${autresD.map(t => `<span class="tag">${t}</span>`).join("")}</span>
+    ${nvBadge(nv)}
+    <select data-act="move" data-g="${g.id}" data-e="${id}" title="Déplacer ou retirer">
+      <option value="">Déplacer…</option>
+      ${autres.map(o => `<option value="${o.id}">→ ${esc(o.titre)}</option>`).join("")}
+      <option value="__out">Retirer du groupe</option>
+    </select><span></span></div>`;
+}
+function groupeHTML(g, liste){
+  const S = R()[g.disp], n = g.eleves.length;
+  const bad = n < S.min || n > S.max;
+  const autres = liste.filter(o => o.id !== g.id);
+  const mats = g.matiere === "M" ? ["M"] : g.disp === "apc" ? ["F"] : ["F","M"];
+  const cibles = competencesCibles(g.eleves, mats);
+  const enseignantClasse = g.disp === "apc" ? R().enseignants[g.classe] : "";
+  return `<div class="grp ${bad ? "warn" : ""}" data-g="${g.id}">
+    <div class="gh"><div><div class="gt">${esc(g.titre)}</div>
+      <div class="gm">${g.disp === "apc" ? `Classe de ${esc(enseignantClasse || "—")}` : `Dominante ${MATS[g.matiere].toLowerCase()}`}</div></div>
+      <span class="count ${bad ? "bad" : ""}" title="Entre ${S.min} et ${S.max} élèves">${n} élève${n > 1 ? "s" : ""}</span></div>
+    <div class="fields">
+      <div><label class="f">Pris en charge par</label><input data-f="intervenant" value="${esc(g.intervenant)}" placeholder="Nom de l'enseignant(e)"></div>
+      <div><label class="f">Jour</label><input data-f="jour" value="${esc(g.jour)}"></div>
+      <div><label class="f">Horaire</label><input data-f="horaire" value="${esc(g.horaire)}" placeholder="ex. 16h30–17h30"></div>
+      <div><label class="f">Nombre de séances</label><input data-f="seances" value="${esc(g.seances)}"></div>
+    </div>
+    ${cibles.length ? `<div class="comps"><b>Compétences à travailler :</b> ${cibles.map(esc).join(" · ")}</div>` : ""}
+    <div class="chips">${g.eleves.map(id => chipHTML(g, id, autres)).join("") || `<span style="color:var(--muted);font-size:13px">Aucun élève</span>`}</div>
+    ${g.attente?.length ? `<div class="waitlist"><b>Au-delà de la capacité (${g.attente.length}) :</b> ${g.attente.map(byId).filter(Boolean).map(e => esc(nomComplet(e))).join(", ")} — à prévoir à la période suivante ou à répartir.</div>` : ""}
+    <div class="addrow"><input list="elevesList" data-add="${g.id}" placeholder="+ Ajouter un élève…"><button class="small" data-act="del" data-g="${g.id}" title="Supprimer le groupe">✕</button></div>
+  </div>`;
+}
+function renderGroupes(){
+  const body = $("#gBody");
+  if (!DATA.eleves.length) { body.innerHTML = `<div class="empty">Importez d'abord les fichiers de restitution.</div>`; return; }
+  const liste = DATA.groupes[gCur], R_ = R();
+  let intro = "";
+  if (gCur === "apc") {
+    const tot = new Set(liste.flatMap(g => g.eleves)).size;
+    intro = `<h2>APC — élèves les plus en difficulté</h2>
+      <p class="lead">Dans chaque classe, un groupe de français (jour 1) et un groupe de mathématiques (jour 2) avec les élèves ${R_.apc.niveauMin === 3 ? "N3" : "N" + R_.apc.niveauMin + " et plus"} de la discipline, de ${R_.apc.min} à ${R_.apc.max} élèves${R_.apc.completer ? ", complétés si besoin par les élèves suivants les plus fragiles" : ""}. ${tot} élèves concernés.</p>`;
+  } else if (gCur === "s1d") {
+    const S = R_.s1d, h = liste.length * S.mercredis * S.duree;
+    intro = `<h2>Soutien 1D — missions pacte</h2>
+      <p class="lead">Élèves ${S.publics.map(p => "N" + p).join(" et ")} de ${S.niveaux.join(" et ")}, en groupes de ${S.min} à ${S.max}, sur ${S.mercredis} mercredis.</p>
+      <div class="card budget"><b>Moyens :</b> ${liste.length} groupe(s) × ${S.mercredis} mercredis × ${String(S.duree).replace(".", ",")} h =
+        <b style="color:${h > S.heures ? "var(--b)" : "var(--s)"}">${String(h).replace(".", ",")} h</b> sur ${S.heures} h
+        <div class="gauge ${h > S.heures ? "over" : ""}"><i style="width:${Math.min(100, 100 * h / S.heures)}%"></i></div></div>`;
+  } else {
+    intro = `<h2>Stages de réussite (SRAN)</h2>
+      <p class="lead">Le stage est proposé aux élèves ${R_.sran.publics.map(p => "N" + p).join(" et ")} des niveaux concernés ; seuls ceux dont la famille a donné son accord entrent dans les groupes (${R_.sran.min} à ${R_.sran.max} élèves par enseignant). Indiquez la réponse des familles ci-dessous, puis cliquez sur « Refaire les groupes SRAN ».</p>
+      ${R_.sran.sessions.map((ss, si) => accordsHTML(ss, si)).join("")}`;
+  }
+  body.innerHTML = `${intro}
+    <div class="bar noprint" style="margin-top:6px">
+      <button class="primary" id="gRegen">Refaire les groupes ${DLIB[gCur]}</button>
+      <button id="gAdd">+ Groupe vide</button>
+      <span class="grow"></span>
+      <button id="gPrint">Imprimer</button>
+      <button id="gXlsx">Exporter en Excel</button>
+    </div>
+    <div class="print-only"><strong>École élémentaire Jean Aicard — ${DLIB[gCur]} ${ANNEE}</strong></div>
+    <div class="groups">${liste.map(g => groupeHTML(g, liste)).join("") || `<div class="empty">Aucun groupe. ${gCur === "sran" ? "Indiquez d'abord les accords des familles." : ""}</div>`}</div>`;
+
+  $("#gRegen").onclick = () => {
+    if (liste.length && !confirm(`Refaire les groupes ${DLIB[gCur]} à partir des résultats ? Les modifications faites à la main sur ces groupes seront perdues.`)) return;
+    DATA.groupes[gCur] = gCur === "apc" ? genAPC() : gCur === "s1d" ? genS1D() : genSRAN();
+    changed(); renderGroupes();
+  };
+  $("#gAdd").onclick = () => {
+    DATA.groupes[gCur].push({ id: uid(), disp: gCur, matiere: "F", titre: `Nouveau groupe ${DLIB[gCur]}`, classe: "", niveaux: [], jour: "", horaire: "", seances: "", note: "", intervenant: "", eleves: [], attente: [] });
+    changed(); renderGroupes();
+  };
+  $("#gPrint").onclick = () => window.print();
+  $("#gXlsx").onclick = exporterExcel;
+
+  $$(".grp input[data-f]", body).forEach(inp => inp.onchange = () => {
+    const g = liste.find(x => x.id === inp.closest(".grp").dataset.g); g[inp.dataset.f] = inp.value.trim(); changed();
+  });
+  $$("select[data-act=move]", body).forEach(sel => sel.onchange = () => {
+    const g = liste.find(x => x.id === sel.dataset.g), id = sel.dataset.e;
+    g.eleves = g.eleves.filter(x => x !== id);
+    if (sel.value !== "__out") liste.find(x => x.id === sel.value)?.eleves.push(id);
+    changed(); renderGroupes();
+  });
+  $$("button[data-act=del]", body).forEach(b => b.onclick = () => {
+    const g = liste.find(x => x.id === b.dataset.g);
+    if (!confirm(`Supprimer le groupe « ${g.titre} » ?`)) return;
+    DATA.groupes[gCur] = liste.filter(x => x !== g); changed(); renderGroupes();
+  });
+  $$("input[data-add]", body).forEach(inp => inp.addEventListener("change", () => {
+    const e = DATA.eleves.find(x => nomComplet(x) + " — " + x.classe === inp.value);
+    if (!e) return;
+    const g = liste.find(x => x.id === inp.dataset.add);
+    if (!g.eleves.includes(e.id)) { g.eleves.push(e.id); g.attente = (g.attente || []).filter(x => x !== e.id); }
+    changed(); renderGroupes();
+  }));
+  $$("select[data-accord]", body).forEach(sel => sel.onchange = () => {
+    if (sel.value) DATA.accords[sel.dataset.accord] = sel.value; else delete DATA.accords[sel.dataset.accord];
+    sel.className = sel.value; changed(); renderAccordCounts();
+  });
+  renderAccordCounts();
+}
+function accordsHTML(ss, si){
+  const cand = candidatsSRAN(ss);
+  return `<div class="card accord">
+    <div class="bar" style="margin-bottom:6px"><b class="grow">${esc(ss.nom)} — ${ss.niveaux.join(", ")} · ${ss.enseignants} enseignant(s), ${ss.enseignants * R().sran.max} places</b>
+      <span data-cnt="${si}" style="font-size:13px;color:var(--muted)"></span></div>
+    ${cand.length ? `<div class="tscroll"><table><thead><tr><th>Élève</th><th>Classe</th><th>Besoin</th><th>Français</th><th>Maths</th><th>Accord de la famille</th></tr></thead><tbody>
+      ${cand.map(e => { const a = DATA.accords[e.id] || ""; return `<tr><td><b>${esc(e.nom)}</b> ${esc(e.prenom)}</td><td>${esc(e.classe)}</td><td>${nvBadge(besoin(e))}</td>
+        <td>${nvBadge(profil(e,"F")?.niv)}</td><td>${nvBadge(profil(e,"M")?.niv)}</td>
+        <td><select data-accord="${e.id}" data-s="${si}" class="${a}"><option value="">Proposé — en attente</option><option value="oui" ${a === "oui" ? "selected" : ""}>Oui</option><option value="non" ${a === "non" ? "selected" : ""}>Non</option></select></td></tr>`; }).join("")}
+      </tbody></table></div>` : `<div class="empty">Aucun élève concerné.</div>`}
+  </div>`;
+}
+function renderAccordCounts(){
+  R().sran.sessions.forEach((ss, si) => {
+    const el = $(`[data-cnt="${si}"]`); if (!el) return;
+    const c = candidatsSRAN(ss), oui = c.filter(e => DATA.accords[e.id] === "oui").length, non = c.filter(e => DATA.accords[e.id] === "non").length;
+    el.textContent = `${c.length} proposés · ${oui} oui · ${non} non · ${c.length - oui - non} en attente`;
+  });
+}
+
+/* =====================================================================
+   10) EXPORT EXCEL
+   ===================================================================== */
+function exporterExcel(){
+  if (typeof XLSX === "undefined") { alert("La bibliothèque Excel n'est pas chargée."); return; }
+  const wb = XLSX.utils.book_new();
+  const noms = (ids) => ids.map(byId).filter(Boolean).map(e => `${nomComplet(e)} (${e.classe})`).join(", ");
+  const contin = (ids, d) => [...new Set(ids.flatMap(id => dispositifs(id).filter(x => x.d !== d).map(x => DLIB[x.d])))].join(", ");
+
+  // Projet APC au format du tableau de circonscription
+  const apc = [["Enseignant(e)", "Classe", "Niveau(x)", "Nbre élèves", "Jours et horaires", "Nbre séances", "Domaine", "Compétences", "Élèves", "Bilan", "Continuité (APC, SRAN, Soutien 1D, …)"]];
+  DATA.groupes.apc.forEach(g => {
+    const nivs = [...new Set(g.eleves.map(byId).filter(Boolean).map(e => e.niveau))].join("/");
+    apc.push([g.intervenant, g.classe, nivs, g.eleves.length, [g.jour, g.horaire].filter(Boolean).join(" — "), g.seances, MATS[g.matiere],
+      competencesCibles(g.eleves, [g.matiere]).join(" ; "), noms(g.eleves), "", contin(g.eleves, "apc")]);
+  });
+  const feuille = (rows, w) => { const ws = XLSX.utils.aoa_to_sheet(rows); ws["!cols"] = w.map(x => ({ wch: x })); return ws; };
+  XLSX.utils.book_append_sheet(wb, feuille(apc, [22,10,9,8,22,8,14,50,70,20,22]), "APC");
+
+  ["s1d","sran"].forEach(d => {
+    const rows = [["Groupe", "Pris en charge par", "Jour", "Horaire", "Nbre séances", "Dominante", "Compétences", "Nbre élèves", "Élèves", "Continuité"]];
+    DATA.groupes[d].forEach(g => rows.push([g.titre, g.intervenant, g.jour, g.horaire, g.seances, MATS[g.matiere],
+      competencesCibles(g.eleves, ["F","M"]).join(" ; "), g.eleves.length, noms(g.eleves), contin(g.eleves, d)]));
+    XLSX.utils.book_append_sheet(wb, feuille(rows, [22,22,22,14,8,14,50,8,80,18]), DLIB[d]);
+  });
+
+  const el = [["Classe", "Niveau", "Nom", "Prénom", "Indice français", "Besoin français", "Indice maths", "Besoin maths", "Besoin global", "APC", "S1D", "SRAN", "Accord SRAN"]];
+  DATA.eleves.forEach(e => {
+    const pf = profil(e,"F"), pm = profil(e,"M"), d = dispositifs(e.id);
+    const g = (x) => d.filter(y => y.d === x).map(y => y.g.titre).join(", ");
+    el.push([e.classe, e.niveau, e.nom, e.prenom, pf?.ind ?? "", pf ? NV_LIB[pf.niv] ?? "" : "", pm?.ind ?? "", pm ? NV_LIB[pm.niv] ?? "" : "",
+      NV_LIB[besoin(e)] ?? "", g("apc"), g("s1d"), g("sran"), DATA.accords[e.id] || ""]);
+  });
+  XLSX.utils.book_append_sheet(wb, feuille(el, [9,7,22,16,9,9,9,9,9,24,18,18,10]), "Élèves");
+
+  // Détail par niveau : scores par compétence
+  niveauxPresents().forEach(nv => {
+    ["F","M"].forEach(m => {
+      const comps = DATA.competences[`${nv}|${m}`]; if (!comps) return;
+      const rows = [["Classe", "Nom", "Prénom", "Besoin", ...comps.map(c => c.nom)]];
+      DATA.eleves.filter(e => e.niveau === nv && e.res[m]).forEach(e => {
+        const p = profil(e, m);
+        rows.push([e.classe, e.nom, e.prenom, NV_LIB[p.niv] ?? "abs.", ...e.res[m].map(r => r.s != null ? `${r.s}/${r.m} (${{B:"besoins",F:"fragile",S:"satisf."}[r.g] || "abs."})` : "abs.")]);
+      });
+      XLSX.utils.book_append_sheet(wb, feuille(rows, [9,20,14,8, ...comps.map(() => 18)]), `${nv} ${m === "F" ? "français" : "maths"}`);
+    });
+  });
+  XLSX.writeFile(wb, `Evaluations_groupes_Jean_Aicard_${ANNEE}.xlsx`);
+}
+
+/* =====================================================================
+   11) RÉGLAGES
+   ===================================================================== */
+function renderReglages(){
+  const S = R();
+  const n = { 3:0, 2:0, 1:0, 0:0 }; DATA.eleves.forEach(e => { const b = besoin(e); if (b != null) n[b]++; });
+  const nb = (path, v, step = 1, min = 0, max = 100) => `<input type="number" data-path="${path}" value="${v}" step="${step}" min="${min}" max="${max}">`;
+  const chk = (path, list, val) => `<label style="display:inline-flex;gap:4px;align-items:center;margin-right:10px;font-size:14px"><input type="checkbox" data-list="${path}" value="${val}" ${list.includes(val) ? "checked" : ""}> ${val}</label>`;
+  $("#sets").innerHTML = `
+    <div class="card"><h3 style="margin-top:0">Repérage des besoins</h3>
+      <div class="row"><span>N3 si indice ≥</span>${nb("seuils.n3", S.seuils.n3)}</div>
+      <div class="row"><span>N2 si indice ≥</span>${nb("seuils.n2", S.seuils.n2)}</div>
+      <div class="row"><span>N1 si indice ≥</span>${nb("seuils.n1", S.seuils.n1)}</div>
+      <div class="rule">Indice d'une discipline = (2 points par compétence « à besoins » + 1 point par compétence « fragile ») ÷ le maximum possible, en %. Le besoin global d'un élève est le plus élevé de ses deux disciplines.<br>
+      Avec ces seuils : <b>${n[3]}</b> N3 · <b>${n[2]}</b> N2 · <b>${n[1]}</b> N1 · ${n[0]} sans besoin.</div>
+    </div>
+    <div class="card"><h3 style="margin-top:0">APC</h3>
+      <div class="row"><span>Public (niveau de besoin minimal dans la discipline)</span><select data-path="apc.niveauMin">${[3,2,1].map(v => `<option value="${v}" ${S.apc.niveauMin === v ? "selected" : ""}>N${v}${v < 3 ? " et plus" : ""}</option>`).join("")}</select></div>
+      <div class="row"><span>Élèves par groupe — minimum</span>${nb("apc.min", S.apc.min, 1, 1, 20)}</div>
+      <div class="row"><span>Élèves par groupe — maximum</span>${nb("apc.max", S.apc.max, 1, 1, 20)}</div>
+      <div class="row"><span>Compléter jusqu'au minimum avec les élèves suivants</span><select data-path="apc.completer"><option value="true" ${S.apc.completer ? "selected" : ""}>Oui</option><option value="false" ${!S.apc.completer ? "selected" : ""}>Non</option></select></div>
+    </div>
+    <div class="card"><h3 style="margin-top:0">Soutien 1D</h3>
+      <div style="margin-bottom:8px"><label class="f">Niveaux</label>${NIVEAUX.map(v => chk("s1d.niveaux", S.s1d.niveaux, v)).join("")}</div>
+      <div style="margin-bottom:8px"><label class="f">Public</label>${[3,2,1].map(v => chk("s1d.publics", S.s1d.publics.map(x => "N" + x), "N" + v)).join("")}</div>
+      <div class="row"><span>Élèves par groupe — minimum</span>${nb("s1d.min", S.s1d.min, 1, 1, 20)}</div>
+      <div class="row"><span>Élèves par groupe — maximum</span>${nb("s1d.max", S.s1d.max, 1, 1, 20)}</div>
+      <div class="row"><span>Heures de pacte disponibles</span>${nb("s1d.heures", S.s1d.heures, 0.5, 0, 500)}</div>
+      <div class="row"><span>Nombre de mercredis</span>${nb("s1d.mercredis", S.s1d.mercredis, 1, 1, 20)}</div>
+      <div class="row"><span>Durée d'une séance (h)</span>${nb("s1d.duree", S.s1d.duree, 0.25, 0.25, 6)}</div>
+    </div>
+    <div class="card"><h3 style="margin-top:0">Stages SRAN</h3>
+      <div style="margin-bottom:8px"><label class="f">Public</label>${[3,2,1].map(v => chk("sran.publics", S.sran.publics.map(x => "N" + x), "N" + v)).join("")}</div>
+      <div class="row"><span>Élèves par enseignant — minimum</span>${nb("sran.min", S.sran.min, 1, 1, 20)}</div>
+      <div class="row"><span>Élèves par enseignant — maximum</span>${nb("sran.max", S.sran.max, 1, 1, 20)}</div>
+      ${S.sran.sessions.map((ss, i) => `<div style="border-top:1px solid var(--line);padding-top:8px;margin-top:8px">
+        <label class="f">Session ${i + 1}</label><input data-sess="${i}" data-k="nom" value="${esc(ss.nom)}" style="width:100%;margin-bottom:6px">
+        <div style="margin-bottom:6px">${NIVEAUX.map(v => `<label style="display:inline-flex;gap:4px;align-items:center;margin-right:10px;font-size:14px"><input type="checkbox" data-sess="${i}" data-k="niveaux" value="${v}" ${ss.niveaux.includes(v) ? "checked" : ""}> ${v}</label>`).join("")}</div>
+        <div class="row"><span>Nombre d'enseignants</span><input type="number" min="1" max="6" data-sess="${i}" data-k="enseignants" value="${ss.enseignants}"></div>
+        <button class="small danger" data-delsess="${i}">Supprimer cette session</button></div>`).join("")}
+      <button class="small" id="addSess" style="margin-top:8px">+ Ajouter une session</button>
+    </div>
+    <div class="card"><h3 style="margin-top:0">Enseignants des classes</h3>
+      ${ORDRE_CLASSES.map(c => `<div class="teach"><b>${c}</b><input data-ens="${c}" value="${esc(S.enseignants[c] || "")}">
+        <label style="font-size:12px;display:flex;gap:4px;align-items:center"><input type="checkbox" data-disp="${c}" ${S.dispenses.includes(c) ? "checked" : ""}> dispensé(e)</label></div>`).join("")}
+      <div class="rule">« Dispensé(e) » : l'enseignant(e) n'assure pas d'APC ; ses groupes sont marqués « À désigner ».</div>
+    </div>
+    <div class="card"><h3 style="margin-top:0">Données ${ANNEE}</h3>
+      <p style="font-size:14px;margin-top:0">${DATA.eleves.length} élèves · ${Object.keys(DATA.fichiers).length} fichiers importés.</p>
+      <div class="bar"><button id="resetSets">Rétablir les réglages par défaut</button>
+      <button class="danger" id="wipe">Effacer toutes les données de l'année</button></div>
+    </div>`;
+
+  const set = (path, v) => { const k = path.split("."); let o = S; while (k.length > 1) o = o[k.shift()]; o[k[0]] = v; };
+  $$("#sets [data-path]").forEach(inp => inp.onchange = () => {
+    let v = inp.value; if (v === "true" || v === "false") v = v === "true"; else if (v !== "" && !isNaN(v)) v = +v;
+    set(inp.dataset.path, v); changed(); renderReglages();
+  });
+  $$("#sets [data-list]").forEach(inp => inp.onchange = () => {
+    const [a, b] = inp.dataset.list.split(".");
+    const vals = $$(`#sets [data-list="${inp.dataset.list}"]:checked`).map(x => x.value.startsWith("N") ? +x.value.slice(1) : x.value);
+    S[a][b] = vals; changed();
+  });
+  $$("#sets [data-sess]").forEach(inp => inp.onchange = () => {
+    const ss = S.sran.sessions[+inp.dataset.sess], k = inp.dataset.k;
+    if (k === "niveaux") ss.niveaux = $$(`#sets [data-sess="${inp.dataset.sess}"][data-k=niveaux]:checked`).map(x => x.value);
+    else ss[k] = k === "enseignants" ? Math.max(1, +inp.value || 1) : inp.value;
+    changed();
+  });
+  $$("#sets [data-delsess]").forEach(b => b.onclick = () => { S.sran.sessions.splice(+b.dataset.delsess, 1); changed(); renderReglages(); });
+  $("#addSess").onclick = () => { S.sran.sessions.push({ nom: "Nouvelle session", niveaux: [], enseignants: 1 }); changed(); renderReglages(); };
+  $$("#sets [data-ens]").forEach(inp => inp.onchange = () => { S.enseignants[inp.dataset.ens] = inp.value.trim(); changed(); });
+  $$("#sets [data-disp]").forEach(inp => inp.onchange = () => {
+    S.dispenses = $$("#sets [data-disp]:checked").map(x => x.dataset.disp); changed();
+  });
+  $("#resetSets").onclick = () => { if (!confirm("Rétablir tous les réglages par défaut ?")) return; DATA.reglages = structuredClone(REGLAGES_DEFAUT); changed(); renderReglages(); };
+  $("#wipe").onclick = () => {
+    if (!confirm(`Effacer tous les résultats, groupes et accords enregistrés pour ${ANNEE} ? Cette action est définitive.`)) return;
+    DATA = vide(); changed(); $("#importLog").innerHTML = ""; toutRafraichir(); show("import");
+  };
+}
+
+/* =====================================================================
+   12) NAVIGATION ET CONNEXION
+   ===================================================================== */
+let vCur = "import";
+function show(v){
+  vCur = v;
+  $$(".view").forEach(s => s.classList.toggle("hidden", s.id !== "v-" + v));
+  $$("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  $("#login").classList.add("hidden");
+  render();
+}
+function render(){
+  ({ import: renderCoverage, ecole: renderEcole, classes: renderClasses, eleves: renderEleves, groupes: renderGroupes, reglages: renderReglages })[vCur]();
+}
+function toutRafraichir(){ elevesDatalist(); $$(".annee").forEach(x => x.textContent = ANNEE); render(); }
+$$("#tabs button").forEach(b => b.onclick = () => show(b.dataset.v));
+
+async function demarrer(){
+  try {
+    const d = await store.load();
+    if (d) { DATA = Object.assign(vide(), d); DATA.reglages = Object.assign(structuredClone(REGLAGES_DEFAUT), d.reglages || {}); }
+  } catch (e) {
+    $("#v-import").insertAdjacentHTML("afterbegin", `<div class="notice">Lecture des données impossible (${esc(e.code || e.message)}). Vérifiez les règles Firestore de la collection « evaluations ».</div>`);
+  }
+  $("#tabs").classList.remove("hidden");
+  elevesDatalist();
+  show(DATA.eleves.length ? "ecole" : "import");
+  $$(".annee").forEach(x => x.textContent = ANNEE);
+}
+
+if (mode === "firebase") {
+  const { au } = fb;
+  $("#tabs").classList.add("hidden");
+  try { await au.setPersistence(auth, au.browserLocalPersistence); } catch {}
+  au.getRedirectResult(auth).catch(e => $("#loginErr").textContent = "Connexion impossible [" + e.code + "]");
+  $("#btnLogin").onclick = async () => {
+    const prov = new au.GoogleAuthProvider(); prov.setCustomParameters({ prompt: "select_account" });
+    try { await au.signInWithPopup(auth, prov); }
+    catch { try { await au.signInWithRedirect(auth, prov); } catch (e2) { $("#loginErr").textContent = "Connexion impossible [" + e2.code + "]"; } }
+  };
+  au.onAuthStateChanged(auth, (user) => {
+    if (!user || user.isAnonymous) {
+      $("#userBox").innerHTML = ""; $$(".view").forEach(s => s.classList.add("hidden"));
+      $("#tabs").classList.add("hidden"); $("#login").classList.remove("hidden"); return;
+    }
+    $("#userBox").innerHTML = `<span>${esc(user.email)}</span><button class="ghost" id="btnOut">Déconnexion</button>`;
+    $("#btnOut").onclick = () => au.signOut(auth);
+    demarrer();
+  });
+} else {
+  $("#demoNotice").classList.remove("hidden");
+  demarrer();
+}
+</script>
+</body>
+</html>

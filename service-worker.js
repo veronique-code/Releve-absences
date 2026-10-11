@@ -23,13 +23,15 @@ try{
   console.warn("Notifications indisponibles :", e);
 }
 
-const CACHE_NAME = 'espace-direction-v9';
+const CACHE_NAME = 'espace-direction-v10';
 const ASSETS = [
   './index.html',
   './cahier-appel.html',
   './sorties.html',
   './demandes.html',
   './comportement.html',
+  './rendez-vous.html',
+  './evaluations.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'

@@ -139,6 +139,7 @@ body{
 .record.rec-demandes .tab{ background:var(--terracotta); }
 .record.rec-comportement .tab{ background:var(--lilas); }
 .record.rec-rdv .tab{ background:var(--gold); }
+.record.rec-eval .tab{ background:#F6C9D6; }
 
 .record .stripe{
   position:absolute;
@@ -151,6 +152,7 @@ body{
 .record.rec-demandes .stripe{ background:var(--lilas); }
 .record.rec-comportement .stripe{ background:var(--forest); }
 .record.rec-rdv .stripe{ background:var(--ciel); }
+.record.rec-eval .stripe{ background:var(--prune); }
 
 .record h2{
   font-family:'Fraunces',serif;
@@ -177,6 +179,7 @@ body{
 .record.rec-demandes .go{ color:var(--corail-fonce); }
 .record.rec-comportement .go{ color:var(--prune); }
 .record.rec-rdv .go{ color:#2F6FA8; }
+.record.rec-eval .go{ color:var(--prune); }
 .record .go .arrow{ transition:transform .15s ease; }
 
 /* Pastille d'échéances sur la carte Demandes & suivi */
@@ -359,6 +362,19 @@ body:not(.ed-ready){overflow:hidden}
           <span class="tag">Accès protégé</span>
           <span class="tag">Compte rendu</span>
           <span class="tag">Suivis</span>
+        </div>
+      </a>
+
+      <a class="record rec-eval" href="./evaluations.html">
+        <span class="stripe"></span>
+        <span class="tab">Après les évaluations</span>
+        <h2>Évaluations &amp; groupes d'aide</h2>
+        <p class="desc">Importez les fichiers de restitution des évaluations nationales, repérez les élèves à besoins et formez les groupes d'APC, de soutien 1D et de stages SRAN.</p>
+        <span class="go">Ouvrir l'analyse <span class="arrow">→</span></span>
+        <div class="meta-row">
+          <span class="tag">Accès protégé</span>
+          <span class="tag">APC · S1D · SRAN</span>
+          <span class="tag">Export Excel</span>
         </div>
       </a>
 
